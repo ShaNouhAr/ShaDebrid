@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    image: partagehub:latest
+    container_name: partagehub
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+    environment:
+      # If you put the app behind a reverse proxy at https://example.com,
+      # set PUBLIC_URL=https://example.com if you do not use the admin "public URL" override
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: file:/data/app.db
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env (openssl rand -hex 32)}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-changeme}
+      WORKER_INTERVAL_MS: ${WORKER_INTERVAL_MS:-15000}
+      SINGLE_USE_GRACE_SECONDS: ${SINGLE_USE_GRACE_SECONDS:-3600}
+      NODE_ENV: production
+    volumes:
+      # Bind mount : le point d'entrée du conteneur ajuste les droits sur /data pour l'utilisateur node.
+      - ./data:/data
+      # Alternative (volume Docker nommé, sans conflit de propriétaire avec l'hôte) :
+      # - partagehub_db:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

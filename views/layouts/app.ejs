@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="fr" style="height:100%;background:var(--bg)">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title %> · <%= appName %></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles/app.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  </head>
+  <body>
+    <% var isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin'; %>
+
+    <div class="app <%= isAdmin ? '' : 'no-sidebar' %>">
+
+      <% if (isAdmin) { %>
+      <!-- Sidebar (admins only) -->
+      <aside class="sidebar collapsed" id="app-sidebar">
+        <div class="brand">
+          <div class="brand-mark">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 19h14" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="brand-name"><%= appName %></div>
+          <span class="brand-sub">v1</span>
+          <button class="sidebar-toggle" id="sidebar-toggle-btn" title="Réduire / Étendre">
+            <svg id="toggle-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M13 6l6 6-6 6"/><path d="M5 12h14"/>
+            </svg>
+          </button>
+        </div>
+
+        <%- include("../partials/nav.ejs") %>
+
+        <div class="sidebar-footer">
+          <div class="user-chip">
+            <div class="user-avatar"><%= currentUser.username.charAt(0).toUpperCase() %></div>
+            <div class="user-meta">
+              <span class="user-name"><%= currentUser.username %></span>
+              <span class="user-role"><%= currentUser.role %></span>
+            </div>
+            <form method="post" action="/logout" class="logout-form">
+              <button type="submit" class="logout-btn" title="Déconnexion">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            </form>
+          </div>
+          <form method="post" action="/logout" class="sidebar-logout-collapse">
+            <button type="submit" class="logout-btn" title="Déconnexion">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </aside>
+      <% } %>
+
+      <!-- Main content -->
+      <main class="main">
+
+        <% if (!isAdmin && typeof currentUser !== 'undefined' && currentUser) { %>
+        <!-- Top bar for regular users -->
+        <div class="top-bar">
+          <div class="top-bar-brand">
+            <div class="brand-mark" style="width:22px;height:22px;border-radius:6px;">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 19h14" opacity="0.6"/>
+              </svg>
+            </div>
+            <span style="font-size:13px;font-weight:600;"><%= appName %></span>
+          </div>
+          <nav class="top-bar-nav">
+            <a href="/" class="top-bar-link <%= path === '/' || (path && path.startsWith('/new')) ? 'active' : '' %>">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 16V4"/><path d="M7 9l5-5 5 5"/>
+                <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+              </svg>
+              <span class="nav-label">Téléchargement</span>
+            </a>
+            <a href="/gestion-liens" class="top-bar-link <%= path && path.startsWith('/gestion-liens') ? 'active' : '' %>">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/>
+                <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>
+              </svg>
+              <span class="nav-label">Mes liens</span>
+            </a>
+          </nav>
+          <div class="top-bar-right">
+            <span class="mono text-faint" style="font-size:11.5px;"><%= currentUser.username %></span>
+            <form method="post" action="/logout" style="display:inline;">
+              <button type="submit" class="btn btn-ghost btn-sm">Déconnexion</button>
+            </form>
+          </div>
+        </div>
+        <% } %>
+
+        <% if (typeof flash !== 'undefined' && flash) { %>
+          <div class="flash-bar <%= flash.type === 'success' ? 'success' : flash.type === 'error' ? 'error' : '' %>">
+            <% if (flash.type === 'success') { %>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+            <% } else if (flash.type === 'error') { %>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+            <% } %>
+            <%= flash.text %>
+          </div>
+        <% } %>
+
+        <%- body %>
+      </main>
+    </div>
+
+    <% if (isAdmin) { %>
+    <script>
+    (function () {
+      var sidebar  = document.getElementById('app-sidebar');
+      var toggleBtn = document.getElementById('sidebar-toggle-btn');
+      var toggleIcon = document.getElementById('toggle-icon');
+      var app      = document.querySelector('.app');
+      if (!sidebar || !app) return;
+
+      var ICON_EXPAND  = '<path d="M13 6l6 6-6 6"/><path d="M5 12h14"/>';
+      var ICON_COLLAPSE = '<path d="M11 6l-6 6 6 6"/><path d="M19 12H5"/>';
+
+      function setCollapsed(collapsed) {
+        if (collapsed) {
+          sidebar.classList.add('collapsed');
+          app.style.setProperty('--sidebar-w', '52px');
+          if (toggleIcon) toggleIcon.innerHTML = ICON_EXPAND;
+        } else {
+          sidebar.classList.remove('collapsed');
+          app.style.setProperty('--sidebar-w', '240px');
+          if (toggleIcon) toggleIcon.innerHTML = ICON_COLLAPSE;
+        }
+        try { localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0'); } catch(_) {}
+      }
+
+      // Default: collapsed. Restore from localStorage if previously expanded.
+      var saved = null;
+      try { saved = localStorage.getItem('sidebar-collapsed'); } catch(_) {}
+      setCollapsed(saved === null || saved === '1');
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', function () {
+          setCollapsed(!sidebar.classList.contains('collapsed'));
+        });
+      }
+    })();
+    </script>
+    <% } %>
+
+    <!-- Custom confirm modal -->
+    <div id="cmodal" style="display:none;position:fixed;inset:0;z-index:900;align-items:center;justify-content:center;">
+      <div id="cmodal-bg" style="position:absolute;inset:0;background:oklch(0 0 0 / 0.5);backdrop-filter:blur(3px);"></div>
+      <div id="cmodal-box" style="position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px 24px;max-width:320px;width:calc(100% - 40px);box-shadow:0 12px 40px oklch(0 0 0 / 0.45);">
+        <p id="cmodal-msg" style="margin:0 0 20px;font-size:14px;line-height:1.55;color:var(--text);font-weight:500;"></p>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button id="cmodal-cancel" class="btn btn-ghost btn-sm">Annuler</button>
+          <button id="cmodal-ok" class="btn btn-danger btn-sm">Confirmer</button>
+        </div>
+      </div>
+    </div>
+    <style>
+      @keyframes cmodalIn { from { opacity:0;transform:scale(0.95) translateY(6px); } to { opacity:1;transform:none; } }
+      #cmodal-box { animation: cmodalIn 0.14s ease; }
+    </style>
+    <script>
+    (function () {
+      var modal  = document.getElementById('cmodal');
+      var msgEl  = document.getElementById('cmodal-msg');
+      var bg     = document.getElementById('cmodal-bg');
+      var okBtn  = document.getElementById('cmodal-ok');
+      var cancelBtn = document.getElementById('cmodal-cancel');
+      var _cb = null;
+
+      function openModal(msg, cb) {
+        msgEl.textContent = msg;
+        _cb = cb;
+        modal.style.display = 'flex';
+      }
+      function closeModal() {
+        modal.style.display = 'none';
+        _cb = null;
+      }
+
+      okBtn.addEventListener('click', function () { closeModal(); if (_cb) _cb(); });
+      cancelBtn.addEventListener('click', closeModal);
+      bg.addEventListener('click', closeModal);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+      window.doConfirm = function (btn) {
+        var msg        = btn.getAttribute('data-confirm');
+        var form       = btn.closest('form');
+        var setField   = btn.getAttribute('data-set-field');
+        var submitName = btn.getAttribute('data-submit-name');
+        var submitValue= btn.getAttribute('data-submit-value');
+        openModal(msg, function () {
+          if (!form) return;
+          if (setField) {
+            var parts = setField.split(':');
+            if (form.elements[parts[0]]) form.elements[parts[0]].value = parts[1];
+          }
+          if (submitName) {
+            var h = document.createElement('input');
+            h.type = 'hidden'; h.name = submitName; h.value = submitValue || '1';
+            form.appendChild(h);
+          }
+          form.submit();
+        });
+      };
+    })();
+    </script>
+  </body>
+</html>

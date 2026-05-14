@@ -1,0 +1,26 @@
+<div style="text-align:center;margin-bottom:20px;">
+  <h1 style="font-size:20px;font-weight:600;letter-spacing:-0.015em;margin:0 0 4px;">Connexion</h1>
+  <p style="font-size:13px;color:var(--text-dim);margin:0;">Connectez-vous pour continuer.</p>
+</div>
+
+<% if (typeof error !== 'undefined' && error) { %>
+  <div class="flash-bar error" style="margin:0 0 16px;">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+    <% if (error === 'invalid') { %>Identifiants invalides.<% } else if (error === 'missing') { %>Champs requis.<% } else { %>Erreur : <%= error %><% } %>
+  </div>
+<% } %>
+
+<form method="post" action="/login" class="share-card" style="padding:28px;display:flex;flex-direction:column;gap:16px;">
+  <input type="hidden" name="next" value="<%= typeof next !== 'undefined' ? next : '/' %>" />
+  <div class="field">
+    <label class="label" for="username">Identifiant</label>
+    <input id="username" name="username" type="text" autocomplete="username" required autofocus class="input" />
+  </div>
+  <div class="field">
+    <label class="label" for="password">Mot de passe</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required class="input" />
+  </div>
+  <button type="submit" class="btn btn-primary btn-lg" style="justify-content:center;margin-top:4px;">
+    Se connecter
+  </button>
+</form>

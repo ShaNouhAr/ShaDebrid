@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  passwordHash String
+  role         String     @default("user") // "admin" | "user"
+  createdAt    DateTime   @default(now())
+  downloads    Download[]
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model Download {
+  id Int @id @default(autoincrement())
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // "magnet" (magnet/torrent file -> AllDebrid /magnet) or "link" (direct link -> /link/unlock)
+  kind String
+
+  // Original user input (magnet URI, list of links, or torrent file name)
+  inputLabel String
+  // Display name (parsed from AllDebrid response when known)
+  name String?
+
+  // AllDebrid magnet id (kind = "magnet"). NULL for direct links.
+  alldebridMagnetId String?
+
+  // Download lifecycle:
+  // pending  -> just submitted, waiting for AllDebrid to debrid
+  // ready    -> direct links resolved, share token usable
+  // failed   -> AllDebrid returned an error
+  // expired  -> removed (TTL hit or single-use grace elapsed)
+  status String @default("pending")
+
+  errorMessage String?
+
+  // Expiration policy:
+  // "single_use"      -> deleted shortly after first share-link open
+  // "duration"        -> deleted after expirationSeconds from readyAt
+  // "none"            -> never auto-deleted
+  expirationMode    String @default("duration")
+  expirationSeconds Int? // when mode = "duration"
+
+  // Single-use bookkeeping
+  firstOpenedAt DateTime?
+  // For "single_use" mode, scheduled deletion time = firstOpenedAt + grace
+  scheduledDeleteAt DateTime?
+
+  // Public share token (random URL-safe string). Same token gives access to all files.
+  shareToken String @unique
+
+  createdAt DateTime  @default(now())
+  readyAt   DateTime?
+  deletedAt DateTime?
+
+  files DownloadFile[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model DownloadFile {
+  id         Int      @id @default(autoincrement())
+  downloadId Int
+  download   Download @relation(fields: [downloadId], references: [id], onDelete: Cascade)
+
+  // Position inside the multi-file torrent (1-based). 1 for direct links.
+  position Int
+
+  filename String
+  size     BigInt @default(0)
+
+  // Direct AllDebrid download URL (after unlock). Set once status = "ready".
+  directUrl String?
+
+  // Source URL (the "link" returned by AllDebrid /magnet/links - the locked link to unlock)
+  sourceUrl String?
+
+  @@index([downloadId])
+}

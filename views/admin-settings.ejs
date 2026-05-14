@@ -1,0 +1,119 @@
+<div class="page-header" style="--inner-max:720px;">
+  <div class="page-header-inner">
+    <div>
+      <h1 class="page-title">
+        <svg class="page-title-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Paramètres
+      </h1>
+      <p class="page-subtitle">Configuration globale du serveur.</p>
+    </div>
+  </div>
+</div>
+
+<div class="page-body page-enter">
+  <div class="page-body-inner" style="max-width:720px;">
+  <div style="display:flex;flex-direction:column;gap:24px;">
+
+    <!-- Public URL -->
+    <div class="card">
+      <h3 class="card-title">
+        <svg class="card-title-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        URL publique du site
+      </h3>
+      <p class="card-sub">
+        Utilisée pour les liens de partage générés depuis le tableau de bord. Sans valeur forcée, l'URL est
+        déduite des en-têtes Host/proxy ou de la variable <span class="mono" style="color:var(--text-muted);">PUBLIC_URL</span>.
+      </p>
+
+      <div style="background:var(--bg);border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+        <span class="text-faint" style="font-size:11.5px;white-space:nowrap;">Aperçu effectif</span>
+        <span class="mono" style="font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%
+          var _effective = typeof effectivePublicUrl !== 'undefined' && effectivePublicUrl !== '' && effectivePublicUrl != null
+            ? effectivePublicUrl
+            : (typeof publicUrl !== 'undefined' ? publicUrl : '');
+        %><%= _effective %></span>
+        <span class="status-pill ok">actif</span>
+      </div>
+
+      <form method="post" action="/admin/settings" style="display:flex;flex-direction:column;gap:14px;">
+        <input type="hidden" name="settingsAction" value="savePublicUrl" />
+        <div class="field">
+          <label class="label">Forcer une URL de base <span class="label-hint">(facultatif)</span></label>
+          <input name="baseUrl" type="url" class="input mono"
+            value="<%= typeof publicBaseUrlSetting !== 'undefined' && publicBaseUrlSetting != null ? publicBaseUrlSetting : '' %>"
+            placeholder="https://partage.example.com" />
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <button type="button" class="btn btn-danger-ghost btn-sm"
+            data-confirm="Réinitialiser l'URL publique ?"
+            data-set-field="settingsAction:clearPublicUrl"
+            onclick="doConfirm(this)">
+            Réinitialiser (auto / PUBLIC_URL)
+          </button>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer l'URL</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- API Key -->
+    <div class="card">
+      <h3 class="card-title">
+        <svg class="card-title-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+        </svg>
+        Clé API du service de débridage
+      </h3>
+      <p class="card-sub">
+        Clé fournie par votre compte sur le service de débridage.
+        <a href="https://alldebrid.com/apikeys" target="_blank" rel="noopener" style="color:var(--accent);margin-left:4px;">Tableau des clés ↗</a>
+      </p>
+
+      <% if (hasApiKey) { %>
+        <div style="background:var(--bg);border:1px solid var(--border-subtle);border-radius:var(--r-md);padding:14px 16px;margin-bottom:16px;display:grid;grid-template-columns:1fr auto;gap:12px;">
+          <div>
+            <div class="meta-label">Clé enregistrée</div>
+            <div class="mono" style="font-size:13px;"><%= apiKeyMasked %></div>
+          </div>
+          <div style="text-align:right;">
+            <% if (alldebridStatus && alldebridStatus.ok) { %>
+              <span class="status-pill ok">valide</span>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:6px;"><%= alldebridStatus.username %><% if (alldebridStatus.premium) { %> · premium<% } %></div>
+              <% if (alldebridStatus.premiumUntil) { %>
+                <div class="mono text-faint" style="font-size:11px;">jusqu'au <%= alldebridStatus.premiumUntil %></div>
+              <% } %>
+            <% } else if (alldebridStatus) { %>
+              <span class="status-pill err"><%= alldebridStatus.error %></span>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+
+      <form method="post" action="/admin/settings/apikey" style="display:flex;flex-direction:column;gap:14px;">
+        <div class="field">
+          <label class="label">Nouvelle clé API</label>
+          <input name="apiKey" type="text" class="input mono"
+            placeholder="<%= hasApiKey ? 'Laissez vide pour conserver l\'actuelle' : 'Collez votre clé API' %>" />
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <% if (hasApiKey) { %>
+            <button type="button" class="btn btn-danger-ghost btn-sm"
+              data-confirm="Supprimer la clé API enregistrée ?"
+              data-submit-name="clear"
+              data-submit-value="1"
+              formnovalidate
+              onclick="doConfirm(this)">
+              Supprimer la clé
+            </button>
+          <% } else { %><span></span><% } %>
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer &amp; tester</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+  </div>
+</div>

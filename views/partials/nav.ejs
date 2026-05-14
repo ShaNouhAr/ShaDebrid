@@ -1,0 +1,43 @@
+<% if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin') { %>
+  <div class="nav-section-label">Espace</div>
+
+  <a href="/" class="nav-item <%= path === '/' || (path && path.startsWith('/new')) ? 'active' : '' %>" title="Téléchargement">
+    <span class="nav-dot"></span>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 16V4"/><path d="M7 9l5-5 5 5"/>
+      <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+    </svg>
+    <span class="nav-label">Téléchargement</span>
+    <span class="nav-kbd">U</span>
+  </a>
+
+  <a href="/gestion-liens" class="nav-item <%= path && path.startsWith('/gestion-liens') ? 'active' : '' %>" title="Gestion des liens">
+    <span class="nav-dot"></span>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/>
+      <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>
+    </svg>
+    <span class="nav-label">Gestion des liens</span>
+    <span class="nav-kbd">L</span>
+  </a>
+
+  <a href="/admin/users" class="nav-item <%= path && path.startsWith('/admin/users') ? 'active' : '' %>" title="Utilisateurs">
+    <span class="nav-dot"></span>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      <circle cx="17" cy="9" r="2.6"/><path d="M21 19c0-2.6-1.8-4.8-4.2-5.4"/>
+    </svg>
+    <span class="nav-label">Utilisateurs</span>
+    <span class="nav-kbd">P</span>
+  </a>
+
+  <a href="/admin/settings" class="nav-item <%= path && path.startsWith('/admin/settings') ? 'active' : '' %>" title="Paramètres">
+    <span class="nav-dot"></span>
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+    </svg>
+    <span class="nav-label">Paramètres</span>
+    <span class="nav-kbd">S</span>
+  </a>
+<% } %>

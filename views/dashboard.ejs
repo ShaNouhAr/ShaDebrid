@@ -1,0 +1,350 @@
+<div class="page-header">
+  <div class="page-header-inner">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div>
+        <h1 class="page-title">
+          <svg class="page-title-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
+          Gestion des liens
+        </h1>
+        <p class="page-subtitle">
+          <%= downloads.length %> élément<%= downloads.length > 1 ? 's' : '' %>
+          <% if (user.role === 'admin') { %><span style="color:var(--text-faint);"> · vue admin (tous utilisateurs)</span><% } %>
+        </p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;padding-bottom:2px;">
+        <form method="post" action="/downloads/refresh">
+          <button type="submit" class="btn btn-secondary btn-sm">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>
+            </svg>
+            Rafraîchir
+          </button>
+        </form>
+        <a href="/" class="btn btn-primary btn-sm">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          Ajouter
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body page-enter">
+  <div class="page-body-inner">
+
+  <% if (typeof suiteToken !== "undefined" && suiteToken) { %>
+    <div style="margin-bottom:20px;padding:14px 16px;border-radius:var(--r-md);border:1px solid oklch(0.65 0.14 80 / 0.4);background:oklch(0.22 0.04 80 / 0.2);font-size:13px;">
+      <p style="font-weight:500;color:oklch(0.88 0.12 80);margin:0 0 4px;">Préparation du partage en cours</p>
+      <p style="font-size:12px;color:oklch(0.78 0.08 80);margin:0 0 8px;line-height:1.5;">
+        Le débrideur termine l'extraction des fichiers. Cette page se met à jour automatiquement dès que le statut change.
+      </p>
+      <a href="/d/<%= suiteToken %>" style="font-size:12px;color:var(--accent);">Ouvrir la page de partage →</a>
+    </div>
+  <% } %>
+
+  <% if (downloads.length === 0) { %>
+    <div class="empty">
+      <h4 class="empty-title">Aucun téléchargement pour le moment.</h4>
+      <p class="empty-sub">Créez votre premier lien depuis Téléchargement.</p>
+      <a href="/" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+        Ajouter le premier
+      </a>
+    </div>
+  <% } else { %>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="padding-left:22px;width:40%;">Nom</th>
+            <th>Type</th>
+            <th>Taille</th>
+            <th>Expiration</th>
+            <th style="width:120px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% downloads.forEach(function(dl) { %>
+            <%
+              var statusBadge = dl.status === 'ready'   ? 'badge-success' :
+                                dl.status === 'pending' ? 'badge-accent'  :
+                                dl.status === 'failed'  ? 'badge-danger'  :
+                                dl.status === 'expired' ? 'badge-danger'  : '';
+              var statusLabel = dl.status === 'ready'   ? 'prêt'      :
+                                dl.status === 'pending' ? 'en cours'  :
+                                dl.status === 'failed'  ? 'échec'     :
+                                dl.status === 'expired' ? 'expiré'    : dl.status;
+            %>
+            <tr class="dl-row" data-id="<%= dl.id %>" style="cursor:pointer;" onclick="toggleRow('<%= dl.id %>')">
+              <td style="padding-left:22px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                  <div style="width:28px;height:28px;border-radius:7px;background:var(--surface-active);display:grid;place-items:center;color:var(--text-muted);flex-shrink:0;">
+                    <% if (dl.kind === 'magnet') { %>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 4v8a6 6 0 0 0 12 0V4"/><path d="M6 4h4v4H6z"/><path d="M14 4h4v4h-4z"/>
+                      </svg>
+                    <% } else { %>
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+                        <path d="M14 3v5h5"/>
+                      </svg>
+                    <% } %>
+                  </div>
+                  <div style="min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;" title="<%= dl.name %>"><%= dl.name %></span>
+                      <span class="badge <%= statusBadge %>"><span class="badge-dot"></span><%= statusLabel %></span>
+                      <% if (dl.expiresSoon && dl.expiresAtRelative) { %>
+                        <span class="badge badge-warning">expire <%= dl.expiresAtRelative %></span>
+                      <% } %>
+                    </div>
+                    <div class="mono text-faint" style="font-size:11px;margin-top:2px;">ajouté <%= dl.createdAtRelative %></div>
+                    <% if (dl.errorMessage) { %>
+                      <div style="font-size:11.5px;color:var(--danger);margin-top:2px;word-break:break-all;"><%= dl.errorMessage %></div>
+                    <% } %>
+                    <% if (dl.status === 'pending') { %>
+                      <div style="margin-top:8px;display:flex;align-items:center;gap:10px;padding-right:20px;">
+                        <div class="bar-track" style="flex:1;"><div class="bar-fill" style="width:50%;animation:barPulse 1.6s ease-in-out infinite;"></div></div>
+                        <span class="mono text-dim" style="font-size:11px;">en cours</span>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </td>
+              <td><span class="mono text-muted" style="font-size:12px;"><%= dl.kind === 'magnet' ? 'magnet' : 'lien' %></span></td>
+              <td><span class="mono" style="font-size:12.5px;"><%= dl.status === 'ready' ? dl.totalSize : '—' %></span></td>
+              <td>
+                <% if (dl.expirationMode === 'duration') { %>
+                  <span style="font-size:12px;color:var(--text-muted);">durée fixe<% if (dl.expiresAt) { %> · <%= dl.expiresAtRelative %><% } %></span>
+                <% } else if (dl.expirationMode === 'single_use') { %>
+                  <span style="font-size:12px;color:var(--text-muted);">usage unique</span>
+                <% } else { %>
+                  <span style="font-size:12px;color:var(--text-faint);">aucune</span>
+                <% } %>
+              </td>
+              <td onclick="event.stopPropagation();">
+                <div style="display:flex;justify-content:flex-end;align-items:center;gap:4px;padding-right:8px;">
+                  <% if (dl.shareUrl) { %>
+                    <button type="button" class="btn btn-ghost btn-sm js-copy-link" data-share-path="<%= dl.sharePath %>" title="Copier le lien">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>
+                      </svg>
+                    </button>
+                    <a href="<%= dl.sharePath %>" class="btn btn-secondary btn-sm">Ouvrir</a>
+                  <% } %>
+                  <span id="del-<%= dl.id %>" style="display:inline-flex;align-items:center;gap:4px;">
+                    <button type="button" class="btn btn-danger-ghost btn-sm" id="del-btn-<%= dl.id %>" onclick="askDelete('<%= dl.id %>')">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/>
+                      </svg>
+                      Supprimer
+                    </button>
+                    <span id="del-confirm-<%= dl.id %>" style="display:none;align-items:center;gap:4px;">
+                      <span style="font-size:12px;color:var(--text-dim);white-space:nowrap;">Supprimer ?</span>
+                      <button type="button" class="btn btn-danger btn-sm" onclick="doDelete('<%= dl.id %>')">Oui</button>
+                      <button type="button" class="btn btn-ghost btn-sm" onclick="cancelDelete('<%= dl.id %>')">Non</button>
+                    </span>
+                  </span>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Expandable details row -->
+            <tr id="detail-<%= dl.id %>" style="display:none;">
+              <td colspan="5" style="background:oklch(from var(--surface) l c h / 0.5);padding:0;">
+                <div style="padding:18px 22px 20px;">
+                  <% if (dl.shareUrl) { %>
+                    <div class="url-field" style="margin-bottom:16px;">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-faint);flex-shrink:0;">
+                        <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/>
+                        <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>
+                      </svg>
+                      <span class="mono" style="flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" data-share-path="<%= dl.sharePath %>"></span>
+                      <button type="button" class="btn btn-secondary btn-sm js-copy-link" data-share-path="<%= dl.sharePath %>">Copier</button>
+                    </div>
+                  <% } %>
+
+                  <% if (dl.status === 'ready' && dl.files.length > 0) { %>
+                    <div style="margin-bottom:12px;">
+                      <div class="meta-label" style="margin-bottom:8px;">Fichiers (<%= dl.files.length %>) · <%= dl.totalSize %></div>
+                      <table class="tbl" style="font-size:12px;">
+                        <thead>
+                          <tr>
+                            <th style="padding-left:0;">Fichier</th>
+                            <th style="text-align:right;">Taille</th>
+                            <th style="text-align:right;width:90px;">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% dl.files.forEach(function(f) { %>
+                            <tr>
+                              <td style="padding-left:0;word-break:break-all;"><%= f.filename %></td>
+                              <td style="text-align:right;" class="mono"><%= f.size %></td>
+                              <td style="text-align:right;">
+                                <% if (f.ready) { %>
+                                  <a href="/d/<%= dl.shareToken %>/f/<%= f.id %>" target="_blank" rel="noopener" class="text-accent" style="font-size:12px;">Télécharger</a>
+                                <% } else { %>
+                                  <span class="text-danger" style="font-size:12px;">non débloqué</span>
+                                <% } %>
+                              </td>
+                            </tr>
+                          <% }); %>
+                        </tbody>
+                      </table>
+                    </div>
+                  <% } %>
+
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+                    <div class="meta-block">
+                      <div class="meta-label">Expiration</div>
+                      <div class="meta-val">
+                        <% if (dl.expirationMode === 'duration') { %>
+                          durée fixe<% if (dl.expiresAt) { %> · <%= dl.expiresAt %><% } %>
+                        <% } else if (dl.expirationMode === 'single_use') { %>
+                          usage unique<% if (dl.firstOpenedAt) { %> · ouvert le <%= dl.firstOpenedAt %><% } else { %> · pas encore ouvert<% } %>
+                        <% } else { %>
+                          aucune
+                        <% } %>
+                      </div>
+                    </div>
+                    <% if (dl.readyAt) { %>
+                      <div class="meta-block">
+                        <div class="meta-label">Prêt le</div>
+                        <div class="meta-val"><%= dl.readyAt %> (<%= dl.readyAtRelative %>)</div>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+  </div>
+</div>
+
+<style>
+  @keyframes barPulse {
+    0%,100% { opacity:1; } 50% { opacity:0.5; }
+  }
+</style>
+
+<script>
+(function () {
+  function fullUrl(path) { return window.location.origin + path; }
+
+  // Fill URL text spans in detail rows
+  document.querySelectorAll('span[data-share-path]').forEach(function (el) {
+    el.textContent = fullUrl(el.getAttribute('data-share-path'));
+  });
+
+  var SVG_CHECK = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+  function copyText(text, onSuccess) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(onSuccess).catch(function () { fallbackCopy(text, onSuccess); });
+    } else {
+      fallbackCopy(text, onSuccess);
+    }
+  }
+  function fallbackCopy(text, onSuccess) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { if (document.execCommand('copy')) onSuccess(); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('.js-copy-link').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var path = btn.getAttribute('data-share-path');
+      if (!path) return;
+      var url = fullUrl(path);
+      var isIconOnly = !!btn.querySelector('svg') && !btn.textContent.trim();
+      copyText(url, function () {
+        if (isIconOnly) {
+          var prev = btn.innerHTML;
+          btn.innerHTML = SVG_CHECK;
+          btn.style.color = 'var(--success)';
+          setTimeout(function () { btn.innerHTML = prev; btn.style.color = ''; }, 1800);
+        } else {
+          var label = btn.textContent.trim();
+          btn.textContent = '✓ Copié';
+          btn.style.color = 'var(--success)';
+          setTimeout(function () { btn.textContent = label; btn.style.color = ''; }, 1800);
+        }
+      });
+    });
+  });
+})();
+
+function toggleRow(id) {
+  var row = document.getElementById('detail-' + id);
+  if (!row) return;
+  row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+var _delOutsideHandler = null;
+
+function askDelete(id) {
+  document.getElementById('del-btn-' + id).style.display = 'none';
+  var conf = document.getElementById('del-confirm-' + id);
+  conf.style.display = 'inline-flex';
+  if (_delOutsideHandler) document.removeEventListener('click', _delOutsideHandler);
+  setTimeout(function () {
+    _delOutsideHandler = function (e) {
+      var wrap = document.getElementById('del-' + id);
+      if (wrap && !wrap.contains(e.target)) {
+        cancelDelete(id);
+        document.removeEventListener('click', _delOutsideHandler);
+        _delOutsideHandler = null;
+      }
+    };
+    document.addEventListener('click', _delOutsideHandler);
+  }, 0);
+}
+
+function cancelDelete(id) {
+  var conf = document.getElementById('del-confirm-' + id);
+  if (conf) conf.style.display = 'none';
+  var btn = document.getElementById('del-btn-' + id);
+  if (btn) btn.style.display = '';
+  if (_delOutsideHandler) {
+    document.removeEventListener('click', _delOutsideHandler);
+    _delOutsideHandler = null;
+  }
+}
+
+function doDelete(id) {
+  fetch('/downloads/' + id + '/delete', { method: 'POST', credentials: 'same-origin' })
+    .then(function () { window.location.href = '/gestion-liens'; })
+    .catch(function () { window.location.href = '/gestion-liens'; });
+}
+</script>
+
+<% if (downloads.length > 0) { %>
+  <% var _hasPending = false; downloads.forEach(function(d) { if (d.status === 'pending') _hasPending = true; }); %>
+  <% if (_hasPending) { %>
+    <script>
+    (function () {
+      var initial = <%- JSON.stringify(downloads.map(function(d){ return {id:d.id,status:d.status}; })) %>;
+      function sig(items) { return JSON.stringify(items.map(function(x){ return {id:x.id,status:x.status}; })); }
+      var last = sig(initial);
+      setInterval(function () {
+        fetch('/downloads/poll', { credentials:'same-origin', headers:{ Accept:'application/json' } })
+          .then(function(r){ return r.json(); })
+          .then(function(data){ if (data && data.items && sig(data.items) !== last) location.reload(); })
+          .catch(function(){});
+      }, 4000);
+    })();
+    </script>
+  <% } %>
+<% } %>
