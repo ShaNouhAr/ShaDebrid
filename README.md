@@ -1,4 +1,4 @@
-# Relais
+# ShaDebrid
 
 Application self‑hosted pour envoyer des **magnets, torrents ou liens** (1fichier, uptobox, etc.) vers un **service de débridage** (via sa clé API), puis partager un **lien unique** par téléchargement, avec :
 
@@ -49,9 +49,9 @@ Voir le script d’entrée Docker qui ajuste les droits sur `/data`. Sinon utili
 
 ```yaml
 volumes:
-  - partagehub_db:/data
+  - shadebrid_db:/data
 # volumes:
-#   partagehub_db:
+#   shadebrid_db:
 ```
 
 ### Reverse proxy (HTTPS)

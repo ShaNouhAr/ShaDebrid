@@ -42,7 +42,7 @@ export const config = {
     required("SINGLE_USE_GRACE_SECONDS", "3600"),
     10,
   ),
-  userAgent: "Relais/0.1",
+  userAgent: "ShaDebrid/0.1",
 } as const;
 
 export function isStrongEnoughSecret(secret: string): boolean {

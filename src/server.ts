@@ -138,7 +138,7 @@ async function main(): Promise<void> {
   await app.listen({ host: config.host, port: config.port });
   app.log.info(
     { bundleMtime },
-    "Relais démarré (POST /admin/settings doit exister sur ce build ; si 404, reconstruire l’image ou dist/)",
+    "ShaDebrid démarré (POST /admin/settings doit exister sur ce build ; si 404, reconstruire l’image ou dist/)",
   );
   startWorker();
 

@@ -1,8 +1,8 @@
 services:
   app:
     build: .
-    image: partagehub:latest
-    container_name: partagehub
+    image: shadebrid:latest
+    container_name: shadebrid
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-3000}:3000"
@@ -23,7 +23,7 @@ services:
       # Bind mount : le point d'entrée du conteneur ajuste les droits sur /data pour l'utilisateur node.
       - ./data:/data
       # Alternative (volume Docker nommé, sans conflit de propriétaire avec l'hôte) :
-      # - partagehub_db:/data
+      # - shadebrid_db:/data
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
