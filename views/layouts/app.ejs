@@ -96,7 +96,12 @@
             </a>
           </nav>
           <div class="top-bar-right">
-            <span class="mono text-faint" style="font-size:11.5px;"><%= currentUser.username %></span>
+            <a href="/account" class="top-bar-link <%= path && path.startsWith('/account') ? 'active' : '' %>" style="font-size:11.5px;" title="Mon compte">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+              </svg>
+              <span class="nav-label"><%= currentUser.username %></span>
+            </a>
             <form method="post" action="/logout" style="display:inline;">
               <button type="submit" class="btn btn-ghost btn-sm">Déconnexion</button>
             </form>
