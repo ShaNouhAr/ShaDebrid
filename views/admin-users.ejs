@@ -64,7 +64,28 @@
                   <% if (u.id !== user.id) { %>
                     <details style="position:relative;">
                       <summary class="btn btn-ghost btn-sm" style="list-style:none;cursor:pointer;">···</summary>
-                      <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:10;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:10px;box-shadow:var(--shadow-md);">
+                      <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:10;min-width:220px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:10px;box-shadow:var(--shadow-md);">
+                        <% if (u.role !== 'admin') { %>
+                        <div style="margin-bottom:10px;">
+                          <div class="meta-label" style="margin-bottom:6px;">Expirations autorisées</div>
+                          <form method="post" action="/admin/users/<%= u.id %>/permissions" style="display:flex;flex-direction:column;gap:5px;">
+                            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
+                              <input type="checkbox" name="single_use" value="1" <%= u.allowedExpirationModes.includes('single_use') ? 'checked' : '' %> style="accent-color:var(--accent);" />
+                              Usage unique
+                            </label>
+                            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
+                              <input type="checkbox" name="duration" value="1" <%= u.allowedExpirationModes.includes('duration') ? 'checked' : '' %> style="accent-color:var(--accent);" />
+                              Durée fixe
+                            </label>
+                            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
+                              <input type="checkbox" name="none" value="1" <%= u.allowedExpirationModes.includes('none') ? 'checked' : '' %> style="accent-color:var(--accent);" />
+                              Sans limite
+                            </label>
+                            <button class="btn btn-secondary btn-sm" style="margin-top:4px;align-self:flex-end;">Enregistrer</button>
+                          </form>
+                        </div>
+                        <div style="height:1px;background:var(--border-subtle);margin:2px 0 8px;"></div>
+                        <% } %>
                         <form method="post" action="/admin/users/<%= u.id %>/password" style="display:flex;gap:6px;margin-bottom:8px;">
                           <input name="password" type="text" placeholder="nouveau mot de passe" class="input" style="font-size:12px;padding:5px 8px;" />
                           <button class="btn btn-secondary btn-sm">OK</button>

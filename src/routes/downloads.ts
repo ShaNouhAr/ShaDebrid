@@ -131,6 +131,15 @@ function toView(
 }
 
 export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
+  async function getAllowedModes(userId: number, role: string): Promise<string[]> {
+    if (role === "admin") return ["single_use", "duration", "none"];
+    const dbUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { allowedExpirationModes: true },
+    });
+    return (dbUser?.allowedExpirationModes || "single_use").split(",").filter(Boolean);
+  }
+
   async function renderNewDownloadForm(
     req: FastifyRequest,
     reply: FastifyReply,
@@ -138,10 +147,12 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
     const user = await requireAuth(req, reply);
     if (!user) return;
     const apiKey = await getAlldebridApiKey();
+    const allowedExpirationModes = await getAllowedModes(user.id, user.role);
     return await reply.renderPage("new.ejs", {
       title: "Téléchargement",
       user,
       hasApiKey: !!apiKey,
+      allowedExpirationModes,
       flash: getFlash(req),
     });
   }
@@ -248,12 +259,11 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
       fields.password = req.body.password || "";
     }
 
-    const expirationMode =
-      fields.expirationMode === "duration"
-        ? "duration"
-        : fields.expirationMode === "none"
-          ? "none"
-          : "single_use";
+    const allowedModes = await getAllowedModes(user.id, user.role);
+    const requestedMode = fields.expirationMode;
+    const expirationMode = (
+      allowedModes.includes(requestedMode) ? requestedMode : allowedModes[0]
+    ) as string;
     const expirationHours = Math.max(
       0,
       parseInt(fields.expirationDuration || "24", 10) || 24,

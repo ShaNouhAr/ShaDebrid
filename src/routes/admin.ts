@@ -18,6 +18,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         id: true,
         username: true,
         role: true,
+        allowedExpirationModes: true,
         createdAt: true,
         _count: { select: { downloads: true } },
       },
@@ -31,6 +32,7 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
         role: u.role,
         createdAt: formatDate(u.createdAt),
         downloadCount: u._count.downloads,
+        allowedExpirationModes: u.allowedExpirationModes.split(","),
       })),
       flash: getFlash(req),
     });
@@ -97,6 +99,24 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       return reply.redirect("/admin/users");
     },
   );
+
+  app.post<{
+    Params: { id: string };
+    Body: { single_use?: string; duration?: string; none?: string };
+  }>("/admin/users/:id/permissions", async (req, reply) => {
+    const user = await requireAdmin(req, reply);
+    if (!user) return;
+    const id = parseInt(req.params.id, 10);
+    const allowed = (["single_use", "duration", "none"] as const).filter(
+      (m) => !!req.body[m],
+    );
+    await prisma.user.update({
+      where: { id },
+      data: { allowedExpirationModes: allowed.length ? allowed.join(",") : "single_use" },
+    });
+    setFlash(req, { type: "success", text: "Permissions mises à jour." });
+    return reply.redirect("/admin/users");
+  });
 
   app.post<{ Params: { id: string }; Body: { role?: string } }>(
     "/admin/users/:id/role",

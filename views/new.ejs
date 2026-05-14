@@ -106,9 +106,11 @@
         <!-- Expiration -->
         <div class="field">
           <label class="label">Expiration</label>
+          <% var _firstMode = allowedExpirationModes[0] || 'single_use'; %>
           <div class="exp-grid">
-            <label class="exp-opt active" id="exp-once" onclick="selectExp('single_use',this)">
-              <input type="radio" name="expirationMode" value="single_use" checked style="display:none;" />
+            <% if (allowedExpirationModes.includes('single_use')) { %>
+            <label class="exp-opt <%= _firstMode === 'single_use' ? 'active' : '' %>" id="exp-once" onclick="selectExp('single_use',this)">
+              <input type="radio" name="expirationMode" value="single_use" <%= _firstMode === 'single_use' ? 'checked' : '' %> style="display:none;" />
               <div class="exp-opt-title">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 3v6"/><path d="M12 15v6"/><path d="M3 12h6"/><path d="M15 12h6"/>
@@ -117,9 +119,11 @@
               </div>
               <div class="exp-opt-sub">Détruit après le 1ᵉʳ accès</div>
             </label>
+            <% } %>
 
-            <label class="exp-opt" id="exp-duration" onclick="selectExp('duration',this)">
-              <input type="radio" name="expirationMode" value="duration" style="display:none;" />
+            <% if (allowedExpirationModes.includes('duration')) { %>
+            <label class="exp-opt <%= _firstMode === 'duration' ? 'active' : '' %>" id="exp-duration" onclick="selectExp('duration',this)">
+              <input type="radio" name="expirationMode" value="duration" <%= _firstMode === 'duration' ? 'checked' : '' %> style="display:none;" />
               <div class="exp-opt-title">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16"/><path d="M9 3v4"/><path d="M15 3v4"/>
@@ -133,9 +137,11 @@
                 <span style="font-size:11px;color:var(--text-dim);">heures</span>
               </div>
             </label>
+            <% } %>
 
-            <label class="exp-opt" id="exp-never" onclick="selectExp('none',this)">
-              <input type="radio" name="expirationMode" value="none" style="display:none;" />
+            <% if (allowedExpirationModes.includes('none')) { %>
+            <label class="exp-opt <%= _firstMode === 'none' ? 'active' : '' %>" id="exp-never" onclick="selectExp('none',this)">
+              <input type="radio" name="expirationMode" value="none" <%= _firstMode === 'none' ? 'checked' : '' %> style="display:none;" />
               <div class="exp-opt-title">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M8 12a4 4 0 1 1 4 4 4 4 0 0 0-4 4 4 4 0 1 1 0-8 4 4 0 0 0 4 4 4 4 0 1 1 0-8"/>
@@ -144,6 +150,7 @@
               </div>
               <div class="exp-opt-sub">Suppression manuelle</div>
             </label>
+            <% } %>
           </div>
         </div>
       </div>

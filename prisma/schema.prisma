@@ -12,6 +12,9 @@ model User {
   username     String     @unique
   passwordHash String
   role         String     @default("user") // "admin" | "user"
+  // Comma-separated list of allowed expiration modes for share links.
+  // Admins always have all modes regardless of this field.
+  allowedExpirationModes String @default("single_use,duration,none")
   createdAt    DateTime   @default(now())
   downloads    Download[]
 }
