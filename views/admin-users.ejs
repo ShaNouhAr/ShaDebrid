@@ -26,9 +26,10 @@
           <tr>
             <th style="padding-left:22px;">Identifiant</th>
             <th>Rôle</th>
+            <th>Expirations autorisées</th>
             <th style="text-align:right;">DL</th>
             <th>Créé le</th>
-            <th style="width:80px;"></th>
+            <th style="width:60px;"></th>
           </tr>
         </thead>
         <tbody>
@@ -47,7 +48,7 @@
                 </div>
               </td>
               <td>
-                <form method="post" action="/admin/users/<%= u.id %>/role" style="display:inline-flex;align-items:center;gap:8px;" onsubmit="return true;">
+                <form method="post" action="/admin/users/<%= u.id %>/role" style="display:inline-flex;align-items:center;gap:8px;">
                   <select name="role" class="sel" style="width:auto;padding:4px 24px 4px 8px;font-size:12px;">
                     <option value="user"  <%= u.role === 'user'  ? 'selected' : '' %>>user</option>
                     <option value="admin" <%= u.role === 'admin' ? 'selected' : '' %>>admin</option>
@@ -57,6 +58,29 @@
                   </button>
                 </form>
               </td>
+              <td>
+                <% if (u.role === 'admin') { %>
+                  <span style="font-size:11.5px;color:var(--text-faint);">toutes (admin)</span>
+                <% } else { %>
+                  <form method="post" action="/admin/users/<%= u.id %>/permissions" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <label class="perm-pill <%= u.allowedExpirationModes.includes('single_use') ? 'on' : '' %>">
+                      <input type="checkbox" name="single_use" value="1" <%= u.allowedExpirationModes.includes('single_use') ? 'checked' : '' %> />
+                      Usage unique
+                    </label>
+                    <label class="perm-pill <%= u.allowedExpirationModes.includes('duration') ? 'on' : '' %>">
+                      <input type="checkbox" name="duration" value="1" <%= u.allowedExpirationModes.includes('duration') ? 'checked' : '' %> />
+                      Durée fixe
+                    </label>
+                    <label class="perm-pill <%= u.allowedExpirationModes.includes('none') ? 'on' : '' %>">
+                      <input type="checkbox" name="none" value="1" <%= u.allowedExpirationModes.includes('none') ? 'checked' : '' %> />
+                      Sans limite
+                    </label>
+                    <button type="submit" class="btn btn-ghost btn-sm" title="Enregistrer" style="padding:3px 5px;">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                    </button>
+                  </form>
+                <% } %>
+              </td>
               <td style="text-align:right;"><span class="mono"><%= u.downloadCount %></span></td>
               <td><span style="font-size:12.5px;color:var(--text-muted);"><%= u.createdAt %></span></td>
               <td>
@@ -64,28 +88,8 @@
                   <% if (u.id !== user.id) { %>
                     <details style="position:relative;">
                       <summary class="btn btn-ghost btn-sm" style="list-style:none;cursor:pointer;">···</summary>
-                      <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:10;min-width:220px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:10px;box-shadow:var(--shadow-md);">
-                        <% if (u.role !== 'admin') { %>
-                        <div style="margin-bottom:10px;">
-                          <div class="meta-label" style="margin-bottom:6px;">Expirations autorisées</div>
-                          <form method="post" action="/admin/users/<%= u.id %>/permissions" style="display:flex;flex-direction:column;gap:5px;">
-                            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
-                              <input type="checkbox" name="single_use" value="1" <%= u.allowedExpirationModes.includes('single_use') ? 'checked' : '' %> style="accent-color:var(--accent);" />
-                              Usage unique
-                            </label>
-                            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
-                              <input type="checkbox" name="duration" value="1" <%= u.allowedExpirationModes.includes('duration') ? 'checked' : '' %> style="accent-color:var(--accent);" />
-                              Durée fixe
-                            </label>
-                            <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;">
-                              <input type="checkbox" name="none" value="1" <%= u.allowedExpirationModes.includes('none') ? 'checked' : '' %> style="accent-color:var(--accent);" />
-                              Sans limite
-                            </label>
-                            <button class="btn btn-secondary btn-sm" style="margin-top:4px;align-self:flex-end;">Enregistrer</button>
-                          </form>
-                        </div>
-                        <div style="height:1px;background:var(--border-subtle);margin:2px 0 8px;"></div>
-                        <% } %>
+                      <div style="position:absolute;right:0;top:calc(100% + 4px);z-index:10;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:10px;box-shadow:var(--shadow-md);">
+                        <div class="meta-label" style="margin-bottom:6px;">Changer le mot de passe</div>
                         <form method="post" action="/admin/users/<%= u.id %>/password" style="display:flex;gap:6px;margin-bottom:8px;">
                           <input name="password" type="text" placeholder="nouveau mot de passe" class="input" style="font-size:12px;padding:5px 8px;" />
                           <button class="btn btn-secondary btn-sm">OK</button>
@@ -146,3 +150,13 @@
   </div>
   </div>
 </div>
+
+<script>
+document.querySelectorAll('.perm-pill input').forEach(function(cb) {
+  cb.addEventListener('change', function() {
+    var label = cb.closest('label');
+    if (cb.checked) label.classList.add('on');
+    else label.classList.remove('on');
+  });
+});
+</script>
