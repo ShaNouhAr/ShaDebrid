@@ -90,9 +90,9 @@
                 </button>
               </span>
               <form id="pw-form-<%= u.id %>" method="post" action="/admin/users/<%= u.id %>/password"
-                style="display:none;align-items:center;gap:5px;">
+                style="display:none;align-items:center;gap:5px;flex-wrap:wrap;">
                 <input name="password" type="text" placeholder="nouveau mot de passe" class="input"
-                  style="font-size:12px;padding:5px 9px;width:170px;" />
+                  style="font-size:12px;padding:5px 9px;width:170px;max-width:100%;flex:1;min-width:120px;" />
                 <button type="submit" class="btn btn-secondary btn-sm">OK</button>
                 <button type="button" class="btn btn-ghost btn-sm" onclick="hidePwForm('<%= u.id %>')">✕</button>
               </form>

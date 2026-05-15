@@ -1,7 +1,7 @@
 <div class="share-card page-enter">
   <!-- Header -->
   <div style="padding:28px 32px 20px;border-bottom:1px solid var(--border-subtle);">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <% if (expirationMode === 'single_use') { %>
         <span class="badge badge-accent"><span class="badge-dot"></span>usage unique</span>
       <% } else if (expirationMode === 'duration') { %>
@@ -9,7 +9,7 @@
       <% } else { %>
         <span class="badge badge-success"><span class="badge-dot"></span>disponible</span>
       <% } %>
-      <span class="mono text-faint" style="font-size:11px;"><%= token %></span>
+      <span class="mono text-faint" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:120px;"><%= token %></span>
       <button type="button" id="share-clipboard-btn" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-faint);padding:4px;border-radius:4px;" title="Copier le lien">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>

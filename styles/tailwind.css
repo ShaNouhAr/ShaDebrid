@@ -632,3 +632,192 @@ a       { color: inherit; text-decoration: none; }
   padding: 32px;
   box-shadow: var(--shadow-lg);
 }
+
+/* ──────────────────────────────────────────────────────────────
+ * Responsive — tablette (≤ 960px) et mobile (≤ 640px)
+ * ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 960px) {
+  /* Sidebar admin : forcer le mode collapsé (icon-only) */
+  .sidebar {
+    width: 52px !important;
+    padding: 18px 6px;
+    align-items: center;
+  }
+  .app:not(.no-sidebar) {
+    grid-template-columns: 52px 1fr !important;
+  }
+  .sidebar .brand          { padding: 4px 0 12px; justify-content: center; gap: 0; }
+  .sidebar .brand-name,
+  .sidebar .brand-sub,
+  .sidebar .nav-section-label,
+  .sidebar .nav-label,
+  .sidebar .nav-kbd,
+  .sidebar .user-meta,
+  .sidebar .logout-form    { display: none; }
+  .sidebar .nav-item       { justify-content: center; padding: 8px; gap: 0; width: 36px; }
+  .sidebar .nav-dot        { display: none; }
+  .sidebar .user-chip      { justify-content: center; gap: 0; }
+  .sidebar-toggle          { display: none; }
+  .sidebar-logout-collapse { display: flex; }
+  .brand-link              { justify-content: center; gap: 0; flex: 0 0 auto; }
+
+  /* Page header + body : padding réduit */
+  .page-header             { padding: 0 24px; }
+  .page-body               { padding: 20px 24px 40px; }
+  .page-header-inner       { padding: 20px 0 16px; }
+
+  /* Top bar */
+  .top-bar                 { padding: 0 20px; gap: 6px; }
+
+  /* Grilles */
+  .exp-grid                { grid-template-columns: 1fr 1fr; }
+
+  /* Flash bar */
+  .flash-bar               { margin-left: 24px; margin-right: 24px; }
+}
+
+@media (max-width: 640px) {
+  html, body { font-size: 15px; }
+
+  /* Sidebar : devient une fine barre verticale d'icônes */
+  .sidebar                 { width: 48px !important; padding: 12px 4px; }
+  .app:not(.no-sidebar)    { grid-template-columns: 48px 1fr !important; }
+  .sidebar .nav-item       { width: 34px; padding: 7px; }
+
+  /* Page header / body : compacts */
+  .page-header             { padding: 0 14px; }
+  .page-body               { padding: 16px 14px 32px; }
+  .page-header-inner       {
+    padding: 16px 0 14px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  /* Boutons d'actions du page-header : ligne complète sous le titre */
+  .page-header-actions     { width: 100%; justify-content: flex-end; }
+  /* Wrappers inline (dashboard, etc.) : autorise le wrap */
+  .page-header-inner > div { flex-wrap: wrap !important; max-width: 100%; }
+  .page-header-inner > div > div:last-child {
+    width: 100%;
+    justify-content: flex-end !important;
+  }
+
+  /* Title + subtitle réduits */
+  .page-title              { font-size: 19px; gap: 8px; }
+  .page-title-icon         { width: 18px !important; height: 18px !important; }
+  .page-subtitle           { font-size: 13px; }
+  .card-title              { font-size: 15px; }
+
+  /* Top bar : compacte, labels masqués sauf username */
+  .top-bar                 { padding: 0 12px; height: 48px; gap: 4px; }
+  .top-bar-brand           { margin-right: 6px; }
+  .top-bar-brand span      { display: none; }
+  .top-bar-link            { padding: 5px 8px; }
+  .top-bar-link .nav-label { display: none; }
+  .top-bar-right           { gap: 6px; }
+  .top-bar-right .btn      { padding: 5px 9px; font-size: 11.5px; }
+  .top-bar-right .top-bar-link span.nav-label { display: inline; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Card + button paddings */
+  .card                    { padding: 16px; border-radius: var(--r-md); }
+  .btn                     { padding: 7px 12px; font-size: 13px; }
+  .btn-lg                  { padding: 10px 14px; font-size: 14px; }
+
+  /* Exp grid 1 colonne */
+  .exp-grid                { grid-template-columns: 1fr; gap: 8px; }
+  .exp-opt                 { padding: 12px; }
+
+  /* Flash bar */
+  .flash-bar               { margin-left: 14px; margin-right: 14px; font-size: 12.5px; }
+
+  /* Empty state */
+  .empty                   { padding: 36px 18px; }
+
+  /* ── Tables : sur mobile, masquer cols secondaires de la table principale
+   *   du dashboard (Type, Taille, Expiration). Les badges/infos restent
+   *   visibles dans la colonne "Nom". */
+  .card > .tbl > thead > tr > th:nth-child(2),
+  .card > .tbl > thead > tr > th:nth-child(3),
+  .card > .tbl > thead > tr > th:nth-child(4),
+  .card > .tbl > tbody > tr > td:nth-child(2),
+  .card > .tbl > tbody > tr > td:nth-child(3),
+  .card > .tbl > tbody > tr > td:nth-child(4) {
+    display: none;
+  }
+  /* Padding réduit sur les cellules restantes */
+  .card > .tbl > thead > tr > th  { padding: 0 10px 8px !important; }
+  .card > .tbl > tbody > tr > td  { padding: 12px 10px !important; }
+  .card > .tbl > thead > tr > th:first-child,
+  .card > .tbl > tbody > tr > td:first-child { padding-left: 14px !important; }
+  /* Actions s'empilent à droite, mais peuvent wrap */
+  .card > .tbl > tbody > tr > td:last-child > div {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* Detail row interne : grille de meta-blocks → 1 colonne */
+  .card > .tbl > tbody > tr > td > div > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  /* La table imbriquée des fichiers (dans le detail row) ne doit pas être
+   * raccourcie comme la table principale → on ne touche pas .tbl deeper. */
+
+  /* Login / share / new layouts */
+  .login-stage             { padding: 24px 14px; }
+  .login-card              { padding: 24px; border-radius: var(--r-lg); }
+  .share-stage             { padding: 20px 12px; }
+  .share-card              { border-radius: var(--r-md); }
+  .public-main             { padding: 20px 12px 40px !important; }
+
+  /* ── Share page (paddings inline 28px 32px / 20px 32px / 12px 32px) :
+   *   on force des paddings horizontaux réduits via descendants directs. */
+  .share-card > div,
+  .share-card > ul > li    { padding-left: 18px !important; padding-right: 18px !important; }
+  .share-card > div[id="share-countdown-banner"] {
+    padding-left: 18px !important; padding-right: 18px !important;
+  }
+  /* Liste de fichiers : nom au-dessus, bouton dessous */
+  .share-card > ul > li {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  .share-card > ul > li > a {
+    margin-left: auto;
+  }
+
+  /* Admin-users : grille 2-cols → empilée */
+  .page-body-inner > div[style*="grid-template-columns:1fr 340px"] {
+    display: block !important;
+  }
+  .page-body-inner > div[style*="grid-template-columns:1fr 340px"] > form[class*="card"] {
+    position: static !important;
+    margin-top: 18px;
+  }
+
+  /* Modals */
+  #cmodal-box              { padding: 18px 20px; }
+
+  /* URL field (admin-settings) : empile preview + status */
+  .url-field               { flex-wrap: wrap; gap: 6px !important; }
+
+  /* Admin-settings : grille "1fr auto" pour clé enregistrée → stack */
+  .card > div[style*="grid-template-columns:1fr auto"] {
+    grid-template-columns: 1fr !important;
+    text-align: left !important;
+  }
+  .card > div[style*="grid-template-columns:1fr auto"] > div[style*="text-align:right"] {
+    text-align: left !important;
+  }
+}
+
+/* iPhone SE et écrans très étroits */
+@media (max-width: 380px) {
+  .page-header             { padding: 0 10px; }
+  .page-body               { padding: 14px 10px 28px; }
+  .top-bar                 { padding: 0 10px; }
+  .card                    { padding: 14px; }
+  .share-card > div,
+  .share-card > ul > li    { padding-left: 14px !important; padding-right: 14px !important; }
+}

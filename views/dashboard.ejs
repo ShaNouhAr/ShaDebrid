@@ -1,7 +1,7 @@
 <div class="page-header">
   <div class="page-header-inner">
-    <div style="display:flex;align-items:center;gap:14px;">
-      <div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%;">
+      <div style="flex:1;min-width:0;">
         <h1 class="page-title">
           <svg class="page-title-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
@@ -13,7 +13,7 @@
           <% if (user.role === 'admin') { %><span style="color:var(--text-faint);"> · vue admin (tous utilisateurs)</span><% } %>
         </p>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;padding-bottom:2px;">
+      <div style="display:flex;gap:8px;align-items:center;padding-bottom:2px;flex-wrap:wrap;">
         <form method="post" action="/downloads/refresh">
           <button type="submit" class="btn btn-secondary btn-sm">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -93,9 +93,9 @@
                       </svg>
                     <% } %>
                   </div>
-                  <div style="min-width:0;">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                      <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;" title="<%= dl.name %>"><%= dl.name %></span>
+                  <div style="min-width:0;flex:1;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                      <span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;min-width:0;" title="<%= dl.name %>"><%= dl.name %></span>
                       <span class="badge <%= statusBadge %>"><span class="badge-dot"></span><%= statusLabel %></span>
                       <% if (dl.expiresSoon && dl.expiresAtRelative) { %>
                         <span class="badge badge-warning">expire <%= dl.expiresAtRelative %></span>

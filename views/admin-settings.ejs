@@ -47,7 +47,7 @@
             value="<%= typeof publicBaseUrlSetting !== 'undefined' && publicBaseUrlSetting != null ? publicBaseUrlSetting : '' %>"
             placeholder="https://partage.example.com" />
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
           <button type="button" class="btn btn-danger-ghost btn-sm"
             data-confirm="Réinitialiser l'URL publique ?"
             data-set-field="settingsAction:clearPublicUrl"
@@ -98,7 +98,7 @@
           <input name="apiKey" type="text" class="input mono"
             placeholder="<%= hasApiKey ? 'Laissez vide pour conserver l\'actuelle' : 'Collez votre clé API' %>" />
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
           <% if (hasApiKey) { %>
             <button type="button" class="btn btn-danger-ghost btn-sm"
               data-confirm="Supprimer la clé API enregistrée ?"
