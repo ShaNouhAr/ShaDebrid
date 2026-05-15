@@ -95,6 +95,17 @@ npm run dev
 | `SINGLE_USE_GRACE_SECONDS` | `300` | Fenêtre de retry après le 1er clic sur un fichier d'un lien single_use. |
 | `SINGLE_USE_MAX_LIFETIME_SECONDS` | `3600` | Durée de vie max d'un lien single_use **sans aucun clic** (timer à partir de readyAt). |
 
+## PWA (Progressive Web App)
+
+L'application est installable comme app standalone (Android/iOS/Desktop) :
+- Manifest : `/manifest.webmanifest` (servi à la racine).
+- Service worker : `/sw.js` (cache statique + offline minimal, ne touche **jamais** aux routes `/d/...`, `/downloads/...`, `/admin/...`, auth ou téléchargements).
+- Icônes (PNG 192/512 + maskable + apple-touch) générées depuis `public/favicon.svg` :
+  ```bash
+  npm run build:icons
+  ```
+- Lorsque le CSS change (`build:css`), bump `CACHE_VERSION` dans `public/sw.js` pour forcer l'invalidation côté clients installés.
+
 ## Mises à jour
 
 ```bash

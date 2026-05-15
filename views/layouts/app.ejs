@@ -2,13 +2,23 @@
 <html lang="fr" style="height:100%;background:var(--bg)">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title><%= title %> · <%= appName %></title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/static/styles/app.css" />
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="alternate icon" href="/static/icon-192.png" type="image/png" />
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1a1a1e" />
+    <meta name="application-name" content="<%= appName %>" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="<%= appName %>" />
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
   </head>
   <body>
     <% var isAdmin = typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'admin'; %>
@@ -225,6 +235,16 @@
         });
       };
     })();
+    </script>
+    <!-- PWA — enregistrement du service worker (offline + installable) -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function (err) {
+            console.warn('SW registration failed', err);
+          });
+        });
+      }
     </script>
   </body>
 </html>

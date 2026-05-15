@@ -1,5 +1,5 @@
 import path from "node:path";
-import { statSync } from "node:fs";
+import { statSync, createReadStream } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import Fastify from "fastify";
@@ -118,6 +118,22 @@ async function main(): Promise<void> {
     root: publicDir,
     prefix: "/static/",
     decorateReply: false,
+  });
+
+  // ---- PWA : manifest + service worker servis à la racine ----
+  // SW doit être à la racine pour avoir scope="/" sans header spécial.
+  app.get("/manifest.webmanifest", async (_req, reply) => {
+    return reply
+      .header("Content-Type", "application/manifest+json; charset=utf-8")
+      .header("Cache-Control", "public, max-age=300")
+      .send(createReadStream(path.join(publicDir, "manifest.webmanifest")));
+  });
+  app.get("/sw.js", async (_req, reply) => {
+    return reply
+      .header("Content-Type", "application/javascript; charset=utf-8")
+      .header("Service-Worker-Allowed", "/")
+      .header("Cache-Control", "no-cache")
+      .send(createReadStream(path.join(publicDir, "sw.js")));
   });
 
   // ---- Routes ----

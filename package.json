@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build:css": "mkdir -p public/styles && tailwindcss -c tailwind.config.cjs -i ./styles/tailwind.css -o ./public/styles/app.css --minify",
-    "build": "npm run build:css && esbuild src/server.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/server.js --packages=external --sourcemap",
+    "build:icons": "node scripts/generate-pwa-icons.mjs",
+    "build": "npm run build:css && npm run build:icons && esbuild src/server.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/server.js --packages=external --sourcemap",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
@@ -41,6 +42,7 @@
     "@types/node": "^22.15.3",
     "esbuild": "^0.25.5",
     "prisma": "^6.7.0",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"

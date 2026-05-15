@@ -21,6 +21,7 @@ COPY styles ./styles
 COPY src ./src
 COPY views ./views
 COPY public ./public
+COPY scripts ./scripts
 
 RUN npx prisma generate
 RUN npm run build
