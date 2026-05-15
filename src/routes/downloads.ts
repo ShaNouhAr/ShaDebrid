@@ -174,6 +174,37 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
     async (req, reply) => {
       const user = await requireAuth(req, reply);
       if (!user) return;
+      const rawSuite =
+        typeof req.query.suite === "string" && req.query.suite.length > 0
+          ? req.query.suite
+          : null;
+
+      // Le bandeau « Préparation du partage en cours » ne doit s'afficher que
+      // tant que le download en question est `pending`. S'il est déjà prêt
+      // (le worker a terminé entre la création et le rendu, ou après un reload
+      // du polling), on redirige directement vers sa page de partage. Si le
+      // download est en `failed` ou inconnu, on laisse simplement tomber le
+      // paramètre `suite` et on affiche la liste normalement.
+      let suiteToken: string | null = null;
+      if (rawSuite) {
+        const suiteDl = await prisma.download.findUnique({
+          where: { shareToken: rawSuite },
+          select: { status: true, userId: true },
+        });
+        if (
+          suiteDl &&
+          (user.role === "admin" || suiteDl.userId === user.id)
+        ) {
+          if (suiteDl.status === "ready") {
+            return reply.redirect(`/d/${rawSuite}`, 302);
+          }
+          if (suiteDl.status === "pending") {
+            suiteToken = rawSuite;
+          }
+          // failed / expired / autre : on n'affiche pas le bandeau
+        }
+      }
+
       const baseWhere = user.role === "admin" ? {} : { userId: user.id };
       const downloads = await prisma.download.findMany({
         where: { ...baseWhere, status: { not: "expired" } },
@@ -183,10 +214,6 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
       });
       const publicUrl = await resolvePublicUrl(req);
       const view = downloads.map((d) => toView(d, publicUrl));
-      const suiteToken =
-        typeof req.query.suite === "string" && req.query.suite.length > 0
-          ? req.query.suite
-          : null;
       return await reply.renderPage("dashboard.ejs", {
         title: "Gestion des liens",
         user,
