@@ -3,7 +3,11 @@ import archiver from "archiver";
 import { Readable } from "node:stream";
 import bytes from "bytes";
 import { config } from "../config.js";
-import { safeFilename } from "../utils.js";
+import {
+  isSafeExternalFetchUrl,
+  safeFilename,
+  safeJsonForScript,
+} from "../utils.js";
 import {
   accessShareByToken,
   touchShareSingleUseIfNeeded,
@@ -84,6 +88,20 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
 
       for (const f of readyFiles) {
         if (!f.directUrl) continue;
+        // Défense en profondeur : la directUrl vient d'AllDebrid (donc en théorie
+        // toujours sur leur CDN public HTTPS) mais on refuse explicitement les
+        // schémas non-http(s) et tout hostname privé/local pour éviter une SSRF
+        // si jamais cette URL était corrompue en base.
+        if (!isSafeExternalFetchUrl(f.directUrl)) {
+          archive.append(
+            Buffer.from(
+              `URL refusée par le serveur (hôte interne ou schéma non autorisé).\nURL : ${f.directUrl.slice(0, 120)}…`,
+              "utf-8",
+            ),
+            { name: `_erreur_${safeFilename(f.filename)}.txt` },
+          );
+          continue;
+        }
         try {
           const res = await fetch(f.directUrl, {
             redirect: "follow",
@@ -186,6 +204,21 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
+    // Pré-sérialise les meta destinées au <script type="application/json">.
+    // safeJsonForScript échappe `</script>`, `<!--`, U+2028/U+2029.
+    const shareMetaJson = safeJsonForScript({
+      token: dl.shareToken,
+      expirationMode: dl.expirationMode,
+      zipBaseName,
+      scheduledDeleteAtMs,
+      files: ready.map((f) => ({
+        id: f.id,
+        filename: f.filename,
+        sizeBytes: f.sizeBytes,
+        streamed: !!f.streamed,
+      })),
+    });
+
     return await reply.renderPage(
       "share.ejs",
       {
@@ -202,6 +235,7 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
         singleFile: ready.length === 1 ? ready[0] : null,
         expirationMode: dl.expirationMode,
         scheduledDeleteAtMs,
+        shareMetaJson,
       },
       { layout: "layouts/public.ejs" },
     );
@@ -224,6 +258,12 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
       const f = dl.files.find((x) => x.id === fileId);
       if (!f || !f.directUrl) {
         return reply.code(404).send({ error: "Not ready" });
+      }
+      // Pareil que pour le zip : on refuse de rediriger vers un schéma non
+      // http(s) ou vers un host interne. Évite qu'une directUrl corrompue
+      // serve de tremplin d'open-redirect / leak vers un endpoint privé.
+      if (!isSafeExternalFetchUrl(f.directUrl)) {
+        return reply.code(502).send({ error: "Invalid upstream URL" });
       }
       await touchShareSingleUseIfNeeded(dl);
       if (dl.expirationMode === "single_use") {

@@ -335,7 +335,7 @@ function doDelete(id) {
   <% if (_hasPending) { %>
     <script>
     (function () {
-      var initial = <%- JSON.stringify(downloads.map(function(d){ return {id:d.id,status:d.status}; })) %>;
+      var initial = <%- JSON.stringify(downloads.map(function(d){ return {id:d.id,status:d.status}; })).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026') %>;
       function sig(items) { return JSON.stringify(items.map(function(x){ return {id:x.id,status:x.status}; })); }
       var last = sig(initial);
       setInterval(function () {

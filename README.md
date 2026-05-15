@@ -95,6 +95,23 @@ npm run dev
 | `SINGLE_USE_GRACE_SECONDS` | `300` | Fenêtre de retry après le 1er clic sur un fichier d'un lien single_use. |
 | `SINGLE_USE_MAX_LIFETIME_SECONDS` | `3600` | Durée de vie max d'un lien single_use **sans aucun clic** (timer à partir de readyAt). |
 
+## Sécurité
+
+- **Mots de passe** : bcrypt(12) (~250 ms/hash). Le compare bcrypt est exécuté **même quand l'utilisateur n'existe pas** (anti-énumération par timing).
+- **Sessions** : `@fastify/secure-session` (signature + chiffrement libsodium). Cookies `httpOnly`, `sameSite=lax`, `secure` automatique en HTTPS.
+- **Brute-force login** : rate limit 10 tentatives / minute / IP sur `POST /login`.
+- **Headers** : Helmet → CSP stricte, `X-Frame-Options: DENY`, HSTS (1 an) si TLS détecté, Referrer-Policy `strict-origin-when-cross-origin`.
+- **BFCache** : `Cache-Control: no-store` sur toutes les pages applicatives (sauf assets statiques, partages publics et PWA) pour éviter qu'un « back » après logout réaffiche le dashboard.
+- **Tokens de partage** : 128 bits aléatoires (base64url ~22 caractères), inexploitables par force brute.
+- **Pas d'open-redirect** : `?next=…` validé (chemin local uniquement).
+- **XSS** : EJS échappe `<%= %>` par défaut ; les JSON injectés en `<script>` passent par `safeJsonForScript` (échappe `</script>`, `U+2028/9`).
+- **Anti-SSRF** : avant tout fetch ou redirect 302 d'une URL stockée en base (CDN AllDebrid), on refuse explicitement les schémas non `http(s)` et les hôtes privés / loopback (RFC1918, link-local, ULA IPv6, etc.).
+- **`TRUST_PROXY`** : `true` derrière un reverse proxy local (Caddy/Nginx/Traefik), `false` si exposé direct, ou liste d'IP/CIDR de confiance.
+- **Refus de démarrer en `NODE_ENV=production` si** :
+  - `SESSION_SECRET` fait moins de 32 caractères ;
+  - `BOOTSTRAP_ADMIN_PASSWORD` est une valeur par défaut faible (`changeme`, `admin`, `password`, etc.).
+- En dev, un simple warning est émis pour ces deux cas — change-les avant de passer en prod.
+
 ## PWA (Progressive Web App)
 
 L'application est installable comme app standalone (Android/iOS/Desktop) :
@@ -112,11 +129,6 @@ L'application est installable comme app standalone (Android/iOS/Desktop) :
 git pull
 docker compose up -d --build
 ```
-
-## Sécurité
-
-- Mots de passe en bcrypt, sessions chiffrées, tokens de partage aléatoires.
-- Exposer derrière HTTPS en production ; changer le mot de passe admin par défaut.
 
 ## Limites
 

@@ -102,15 +102,7 @@
   </div>
 </div>
 
-<script type="application/json" id="share-meta"><%- JSON.stringify({
-  token: token,
-  expirationMode: expirationMode,
-  zipBaseName: typeof zipBaseName !== 'undefined' ? zipBaseName : 'release',
-  scheduledDeleteAtMs: typeof scheduledDeleteAtMs !== 'undefined' ? scheduledDeleteAtMs : null,
-  files: files.map(function (f) {
-    return { id: f.id, filename: f.filename, sizeBytes: f.sizeBytes, streamed: !!f.streamed };
-  }),
-}) %></script>
+<script type="application/json" id="share-meta"><%- shareMetaJson %></script>
 
 <script>
 (function () {

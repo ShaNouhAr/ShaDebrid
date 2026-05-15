@@ -6,9 +6,11 @@ import {
   setSessionUser,
   requireAuth,
   verifyPassword,
+  verifyPasswordConstantTime,
   hashPassword,
   type SessionUser,
 } from "../auth.js";
+import { safeNextPath } from "../utils.js";
 import { getFlash, setFlash } from "./downloads.js";
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
@@ -22,7 +24,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         "login.ejs",
         {
           title: "Connexion",
-          next: req.query.next || "/",
+          next: safeNextPath(req.query.next, "/"),
           error: req.query.error,
           flash: null,
         },
@@ -33,23 +35,35 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.post<{
     Body: { username?: string; password?: string; next?: string };
-  }>("/login", async (req, reply) => {
+  }>("/login", {
+    // 10 tentatives / minute / IP : suffisant pour un utilisateur légitime,
+    // bloque un brute-force naïf. Augmenter timeWindow si besoin.
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: "1 minute",
+      },
+    },
+  }, async (req, reply) => {
     const username = (req.body.username || "").trim();
     const password = req.body.password || "";
-    const next = req.body.next || "/";
+    // `next` provient du formulaire : on ne fait *jamais* confiance à sa valeur
+    // pour éviter les open-redirect (ex. /login?next=https://evil.com).
+    const next = safeNextPath(req.body.next, "/");
     if (!username || !password) {
       return reply.redirect(
         `/login?error=missing&next=${encodeURIComponent(next)}`,
       );
     }
     const user = await prisma.user.findUnique({ where: { username } });
-    if (!user) {
-      return reply.redirect(
-        `/login?error=invalid&next=${encodeURIComponent(next)}`,
-      );
-    }
-    const ok = await verifyPassword(password, user.passwordHash);
-    if (!ok) {
+    // On exécute toujours un compare bcrypt (même contre un hash bidon) si l'utilisateur
+    // n'existe pas, pour éviter une énumération de comptes par timing
+    // (un user inconnu renvoyait avant en ~5 ms vs ~250 ms pour un mauvais mot de passe).
+    const ok = await verifyPasswordConstantTime(
+      password,
+      user ? user.passwordHash : null,
+    );
+    if (!user || !ok) {
       return reply.redirect(
         `/login?error=invalid&next=${encodeURIComponent(next)}`,
       );
