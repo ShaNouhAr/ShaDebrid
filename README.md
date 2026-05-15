@@ -5,7 +5,8 @@ Application self‑hosted pour envoyer des **magnets, torrents ou liens** (1fich
 - Comptes utilisateurs (**admin** / **user**)
 - Expiration configurable : durée fixe, usage unique (avec délai de grâce), ou manuelle
 - Worker qui suit les magnets et débloque les liens
-- Redirection **302** vers l’URL directe du fichier côté débrideur (rien ne transite sur ton disque)
+- Téléchargement **streamé via le serveur** (anti-leech : l'URL CDN du débrideur n'est jamais exposée au visiteur ; rien ne touche le disque, tout passe en RAM)
+- Expiration **immédiate** des liens *usage unique* à la fin du téléchargement (et filet de sécurité court en cas d'interruption)
 
 ## URL publique des liens de partage
 
@@ -91,7 +92,8 @@ npm run dev
 | `BOOTSTRAP_ADMIN_USERNAME` | `admin` | Premier admin si base vide. |
 | `BOOTSTRAP_ADMIN_PASSWORD` | `changeme` | À changer. |
 | `WORKER_INTERVAL_MS` | `15000` | Polling magnets (ms). |
-| `SINGLE_USE_GRACE_SECONDS` | `3600` | Grâce après 1er clic (mode single‑use). |
+| `SINGLE_USE_GRACE_SECONDS` | `300` | Fenêtre de retry après le 1er clic sur un fichier d'un lien single_use. |
+| `SINGLE_USE_MAX_LIFETIME_SECONDS` | `3600` | Durée de vie max d'un lien single_use **sans aucun clic** (timer à partir de readyAt). |
 
 ## Mises à jour
 

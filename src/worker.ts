@@ -10,6 +10,7 @@ import {
   AllDebridError,
 } from "./alldebrid.js";
 import { config } from "./config.js";
+import { applySingleUseInitialExpiry } from "./shareAccess.js";
 
 let running = false;
 let timer: NodeJS.Timeout | null = null;
@@ -170,6 +171,10 @@ export async function runOnce(): Promise<void> {
               },
             });
           });
+          if (readyCount > 0) {
+            // Pose le timer initial (1 h par d\u00e9faut) pour les liens single_use.
+            await applySingleUseInitialExpiry(dl.id);
+          }
         }
         // else: still processing, leave as pending
       } catch (err) {
@@ -202,12 +207,25 @@ export async function runMaintenance(): Promise<void> {
     if (now.getTime() < exp) continue;
     await expireDownload(d, apiKey);
   }
-  // 2. single_use mode -> scheduledDeleteAt < now
+  // 2. single_use mode :
+  //    - scheduledDeleteAt < now (timer initial OU raccourci apr\u00e8s clic)
+  //    - OU donn\u00e9es legacy sans scheduledDeleteAt mais readyAt > maxLifetime
+  const maxLifetimeCutoff = new Date(
+    now.getTime() - config.singleUseMaxLifetimeSeconds * 1000,
+  );
   const singleUseExpired = await prisma.download.findMany({
     where: {
       status: "ready",
       expirationMode: "single_use",
-      scheduledDeleteAt: { lt: now },
+      OR: [
+        { scheduledDeleteAt: { lt: now } },
+        {
+          AND: [
+            { scheduledDeleteAt: null },
+            { readyAt: { lt: maxLifetimeCutoff } },
+          ],
+        },
+      ],
     },
     take: 100,
   });

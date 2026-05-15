@@ -38,8 +38,16 @@ export const config = {
     password: required("BOOTSTRAP_ADMIN_PASSWORD", "changeme"),
   },
   workerIntervalMs: parseInt(required("WORKER_INTERVAL_MS", "15000"), 10),
+  /** Filet de sécurité après le 1er CLIC sur un fichier en mode single_use.
+   *  Permet de re-télécharger en cas de coupure. Réduit l'expiration à now + grace. */
   singleUseGraceSeconds: parseInt(
-    required("SINGLE_USE_GRACE_SECONDS", "3600"),
+    required("SINGLE_USE_GRACE_SECONDS", "300"),
+    10,
+  ),
+  /** Durée de vie MAXIMALE d'un lien single_use SANS aucun clic : à partir de readyAt,
+   *  le lien expire automatiquement après ce délai (par défaut 1 h). */
+  singleUseMaxLifetimeSeconds: parseInt(
+    required("SINGLE_USE_MAX_LIFETIME_SECONDS", "3600"),
     10,
   ),
   userAgent: "ShaDebrid/0.1",

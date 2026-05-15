@@ -20,6 +20,21 @@
     <p style="font-size:13px;color:var(--text-dim);margin:0;">
       <%= files.length %> fichier<%= files.length > 1 ? 's' : '' %> · <%= totalSize %>
     </p>
+    <% if (expirationMode === 'single_use') { %>
+      <p id="single-use-hint" style="margin:8px 0 0;font-size:11.5px;color:var(--warning);">
+        Usage unique : le lien sera détruit peu après le premier clic. Petite fenêtre de retry pour les coupures.
+      </p>
+    <% } %>
+  </div>
+
+  <!-- Bandeau d'expiration : affich\u00e9 d\u00e8s qu'un scheduledDeleteAt est connu (1h initial ou 5min apr\u00e8s clic) -->
+  <div id="share-countdown-banner"
+       data-scheduled-at="<%= typeof scheduledDeleteAtMs !== 'undefined' && scheduledDeleteAtMs ? scheduledDeleteAtMs : '' %>"
+       style="display:none;padding:14px 32px;background:oklch(from var(--warning) l c h / 0.12);border-bottom:1px solid var(--border-subtle);text-align:center;font-size:12.5px;color:var(--warning);">
+    <div><span id="share-countdown-label">Lien actif</span> — expire dans <strong id="share-countdown-value" class="mono">—</strong></div>
+    <div style="margin-top:4px;font-size:11px;color:var(--text-dim);">
+      Les téléchargements déjà lancés iront jusqu’à leur fin, même après expiration.
+    </div>
   </div>
 
   <!-- Download actions -->
@@ -39,19 +54,31 @@
       </svg>
       Tous télécharger
     </button>
-    <a href="/d/<%= token %>/liens.txt" class="btn btn-ghost btn-sm">Fichier de liens (.txt)</a>
+    <a href="/d/<%= token %>/liens.txt" class="btn btn-ghost btn-sm" title="Liens CDN directs (JDownloader, aria2c…)">Fichier de liens (.txt)</a>
     <p id="download-all-seq-status" style="display:none;width:100%;font-size:11px;color:var(--text-dim);margin:0;"></p>
   </div>
 
   <!-- File list -->
-  <ul style="max-height:min(60vh,28rem);overflow-y:auto;padding:0;margin:0;list-style:none;">
+  <ul id="file-list" style="max-height:min(60vh,28rem);overflow-y:auto;padding:0;margin:0;list-style:none;">
     <% files.forEach(function(f) { %>
-      <li style="display:flex;align-items:start;justify-content:space-between;gap:12px;padding:12px 32px;border-bottom:1px solid var(--border-subtle);">
-        <div style="min-width:0;">
+      <li class="file-row" id="file-row-<%= f.id %>"
+          data-file-id="<%= f.id %>"
+          style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 32px;border-bottom:1px solid var(--border-subtle);">
+        <div style="min-width:0;flex:1;">
           <div style="word-break:break-word;font-size:13px;color:var(--text);"><%= f.filename %></div>
-          <div class="mono text-faint" style="font-size:11.5px;margin-top:2px;"><%= f.size %></div>
+          <div class="mono text-faint" style="font-size:11.5px;margin-top:2px;">
+            <span><%= f.size %></span>
+            <span class="file-status" style="margin-left:8px;<%= f.streamed ? 'color:var(--success);' : 'display:none;' %>">
+              <%= f.streamed ? '· cliqué (retry possible jusqu\u2019\u00e0 expiration)' : '' %>
+            </span>
+          </div>
         </div>
-        <a href="/d/<%= token %>/f/<%= f.id %>" class="js-file-dl btn btn-secondary btn-sm" style="flex-shrink:0;">
+        <a href="/d/<%= token %>/f/<%= f.id %>"
+           download="<%= f.filename %>"
+           rel="noopener"
+           class="js-file-download btn btn-secondary btn-sm"
+           data-file-id="<%= f.id %>"
+           style="flex-shrink:0;">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>
           </svg>
@@ -60,15 +87,9 @@
       </li>
     <% }); %>
   </ul>
-
-  <% if (expirationMode === 'single_use') { %>
-    <p style="padding:14px 32px;font-size:11.5px;color:var(--warning);margin:0;text-align:center;border-top:1px solid var(--border-subtle);">
-      Usage unique : ce lien sera détruit peu après le premier accès.
-    </p>
-  <% } %>
 </div>
 
-<!-- ZIP progress overlay -->
+<!-- ZIP progress overlay (proxy n\u00e9cessaire par nature) -->
 <div id="zip-progress-overlay" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:oklch(0.10 0.005 260 / 0.85);backdrop-filter:blur(4px);">
   <div class="card" style="width:100%;max-width:360px;box-shadow:var(--shadow-lg);">
     <p id="zip-progress-title" style="font-size:14px;font-weight:500;margin:0 0 4px;">ZIP en cours</p>
@@ -81,10 +102,104 @@
   </div>
 </div>
 
-<script type="application/json" id="share-seq-downloads"><%- JSON.stringify(files.map(function(f){ return { id:f.id, href:"/d/"+token+"/f/"+f.id }; })) %></script>
+<script type="application/json" id="share-meta"><%- JSON.stringify({
+  token: token,
+  expirationMode: expirationMode,
+  zipBaseName: typeof zipBaseName !== 'undefined' ? zipBaseName : 'release',
+  scheduledDeleteAtMs: typeof scheduledDeleteAtMs !== 'undefined' ? scheduledDeleteAtMs : null,
+  files: files.map(function (f) {
+    return { id: f.id, filename: f.filename, sizeBytes: f.sizeBytes, streamed: !!f.streamed };
+  }),
+}) %></script>
 
 <script>
 (function () {
+  var meta = {};
+  try { meta = JSON.parse(document.getElementById('share-meta').textContent || '{}'); } catch (e) {}
+  var TOKEN = meta.token;
+  var IS_SINGLE_USE = meta.expirationMode === 'single_use';
+  var FILES = (meta.files || []).slice();
+  var scheduledAt = meta.scheduledDeleteAtMs ? parseInt(meta.scheduledDeleteAtMs, 10) : null;
+
+  function formatBytes(n) {
+    if (n < 1024) return n + ' o';
+    if (n < 1024*1024) return (n/1024).toFixed(0) + ' Ko';
+    if (n < 1024*1024*1024) return (n/1024/1024).toFixed(1) + ' Mo';
+    return (n/1024/1024/1024).toFixed(2) + ' Go';
+  }
+
+  // ---------- Countdown (1 h initial, raccourci \u00e0 5 min apr\u00e8s clic) ----------
+  var banner = document.getElementById('share-countdown-banner');
+  var bannerVal = document.getElementById('share-countdown-value');
+  var bannerLabel = document.getElementById('share-countdown-label');
+  var hintEl = document.getElementById('single-use-hint');
+  var countdownTimer = null;
+  var anyClicked = (FILES.some(function (x) { return x.streamed; }));
+
+  function setBannerLabel() {
+    if (!bannerLabel) return;
+    bannerLabel.textContent = anyClicked ? 'Lien consommé' : 'Lien actif';
+  }
+
+  function startCountdown(targetMs) {
+    if (!IS_SINGLE_USE || !banner || !bannerVal) return;
+    scheduledAt = targetMs;
+    banner.style.display = '';
+    if (hintEl) hintEl.style.display = 'none';
+    setBannerLabel();
+    if (countdownTimer) clearInterval(countdownTimer);
+    function tick() {
+      var ms = (scheduledAt || 0) - Date.now();
+      if (ms <= 0) {
+        bannerVal.textContent = 'expiré';
+        clearInterval(countdownTimer); countdownTimer = null;
+        setTimeout(function () { location.reload(); }, 600);
+        return;
+      }
+      var s = Math.floor(ms / 1000);
+      var h = Math.floor(s / 3600);
+      var m = Math.floor((s % 3600) / 60);
+      var ss = s % 60;
+      var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+      bannerVal.textContent = h > 0
+        ? h + 'h ' + pad(m) + 'm ' + pad(ss) + 's'
+        : m + 'm ' + pad(ss) + 's';
+    }
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+  }
+
+  // Le serveur pose scheduledDeleteAt dès que la release est ready : on lance imm\u00e9diatement.
+  if (IS_SINGLE_USE && scheduledAt && scheduledAt > Date.now()) {
+    startCountdown(scheduledAt);
+  }
+
+  function markFileClickedUI(fileId) {
+    var f = FILES.find(function (x) { return x.id === fileId; });
+    if (f) f.streamed = true;
+    var row = document.getElementById('file-row-' + fileId);
+    if (row) {
+      var st = row.querySelector('.file-status');
+      if (st) {
+        st.textContent = '· cliqué (retry possible jusqu\u2019à expiration)';
+        st.style.display = '';
+        st.style.color = 'var(--success)';
+      }
+    }
+    if (IS_SINGLE_USE) {
+      // Premier clic : raccourcit le countdown UI \u00e0 5 min (le serveur fait pareil c\u00f4t\u00e9 DB).
+      var clickTarget = Date.now() + 5 * 60 * 1000;
+      if (!scheduledAt || clickTarget < scheduledAt) {
+        anyClicked = true;
+        startCountdown(clickTarget);
+      } else {
+        anyClicked = true;
+        setBannerLabel();
+      }
+    }
+  }
+
+  // ---------- Clipboard ----------
   var clipBtn = document.getElementById('share-clipboard-btn');
   if (clipBtn) {
     var _clipOrig = clipBtn.innerHTML;
@@ -103,7 +218,7 @@
       ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
       document.body.appendChild(ta);
       ta.focus(); ta.select();
-      try { if (document.execCommand('copy')) onSuccess(); } catch(e) {}
+      try { if (document.execCommand('copy')) onSuccess(); } catch (e) {}
       document.body.removeChild(ta);
     }
     clipBtn.addEventListener('click', function () {
@@ -115,47 +230,49 @@
     });
   }
 
-  // Sequential download
-  var seqJson = document.getElementById('share-seq-downloads');
-  var seqBtn  = document.getElementById('download-all-seq-btn');
-  var seqStat = document.getElementById('download-all-seq-status');
-  if (seqJson && seqBtn && seqStat) {
-    var seqList = [];
-    try { seqList = JSON.parse(seqJson.textContent || '[]'); } catch(e) {}
-    var seqTimer = null, seqIdx = 0, delayMs = 1100;
+  // ---------- Per-file 302 click (browser handles the actual download) ----------
+  document.querySelectorAll('.js-file-download').forEach(function (a) {
+    a.addEventListener('click', function () {
+      var id = parseInt(a.getAttribute('data-file-id'), 10);
+      if (!isNaN(id)) markFileClickedUI(id);
+    });
+  });
 
-    function finishSeq() {
-      if (seqTimer) { clearTimeout(seqTimer); seqTimer = null; }
-      seqBtn.disabled = false; seqStat.style.display = 'none'; seqStat.textContent = ''; seqIdx = 0;
-    }
-    function triggerOne(href) {
-      var a = document.createElement('a'); a.href = href; a.rel = 'noopener';
-      document.body.appendChild(a); a.click(); a.remove();
-    }
-    function seqStep() {
-      if (seqIdx >= seqList.length) {
-        seqStat.textContent = 'Terminé (' + seqList.length + ' fichier' + (seqList.length > 1 ? 's' : '') + ').';
-        seqTimer = setTimeout(finishSeq, 2500); return;
-      }
-      triggerOne(seqList[seqIdx].href);
-      seqIdx++;
-      seqStat.textContent = 'Fichier ' + seqIdx + ' / ' + seqList.length + '…';
-      seqTimer = setTimeout(seqStep, delayMs);
-    }
+  // ---------- Tous t\u00e9l\u00e9charger : clics s\u00e9quentiels sur les liens /f/:id (302) ----------
+  var seqBtn = document.getElementById('download-all-seq-btn');
+  var seqStat = document.getElementById('download-all-seq-status');
+  if (seqBtn && seqStat) {
     seqBtn.addEventListener('click', function () {
-      if (!seqList.length || seqBtn.disabled) return;
-      if (seqTimer) { clearTimeout(seqTimer); seqTimer = null; }
-      seqIdx = 0; seqBtn.disabled = true;
-      seqStat.style.display = ''; seqStat.textContent = 'Démarrage…';
-      seqTimer = setTimeout(seqStep, 400);
+      if (seqBtn.disabled) return;
+      var pending = FILES.slice();
+      if (pending.length === 0) return;
+      seqBtn.disabled = true;
+      seqStat.style.display = ''; seqStat.textContent = 'démarrage…';
+
+      var i = 0;
+      function next() {
+        if (i >= pending.length) {
+          seqStat.textContent = 'terminé (' + pending.length + ' fichier' + (pending.length > 1 ? 's' : '') + ').';
+          seqBtn.disabled = false;
+          setTimeout(function () { seqStat.style.display = 'none'; seqStat.textContent = ''; }, 2500);
+          return;
+        }
+        var item = pending[i];
+        var a = document.createElement('a');
+        a.href = '/d/' + encodeURIComponent(TOKEN) + '/f/' + encodeURIComponent(item.id);
+        a.download = item.filename || '';
+        a.rel = 'noopener';
+        document.body.appendChild(a); a.click(); a.remove();
+        markFileClickedUI(item.id);
+        i++;
+        seqStat.textContent = 'fichier ' + i + ' / ' + pending.length + '…';
+        setTimeout(next, 1100);
+      }
+      next();
     });
   }
 
-  function formatMo(n) {
-    if (n < 1024*1024) return (n/1024).toFixed(0) + ' Ko';
-    return (n/1024/1024).toFixed(1) + ' Mo';
-  }
-
+  // ---------- ZIP (proxy par nature, expire la release sur succ\u00e8s complet) ----------
   var zipBtn     = document.getElementById('zip-download-btn');
   var overlay    = document.getElementById('zip-progress-overlay');
   var titleEl    = document.getElementById('zip-progress-title');
@@ -165,20 +282,18 @@
   var cancelBtn  = document.getElementById('zip-progress-cancel');
   if (!zipBtn || !overlay) return;
 
-  var ac = null;
-
+  var zipAc = null;
   function setOpen(open) { overlay.style.display = open ? 'flex' : 'none'; }
   function resetBar() { barEl.style.width = '0%'; barEl.style.animation = ''; bytesEl.textContent = ''; }
-
   cancelBtn.addEventListener('click', function () {
-    if (ac) ac.abort(); setOpen(false); zipBtn.disabled = false; resetBar();
+    if (zipAc) zipAc.abort();
+    setOpen(false); zipBtn.disabled = false; resetBar();
   });
 
   zipBtn.addEventListener('click', function () {
-    var token = zipBtn.getAttribute('data-token');
-    var hint  = parseInt(zipBtn.getAttribute('data-hint-bytes') || '0', 10) || 0;
-    if (!token) return;
-    ac = new AbortController();
+    if (zipBtn.disabled) return;
+    var hint = parseInt(zipBtn.getAttribute('data-hint-bytes') || '0', 10) || 0;
+    zipAc = new AbortController();
     zipBtn.disabled = true; resetBar();
     if (titleEl) titleEl.textContent = 'ZIP en cours';
     detailEl.textContent = 'Assemblage sur le serveur, patientez…';
@@ -186,10 +301,10 @@
     barEl.style.animation = 'zipPulse 1.2s ease-in-out infinite';
     setOpen(true);
 
-    fetch('/d/' + encodeURIComponent(token) + '/archive.zip', { signal: ac.signal, credentials: 'same-origin' })
+    fetch('/d/' + encodeURIComponent(TOKEN) + '/archive.zip', { signal: zipAc.signal, credentials: 'same-origin' })
       .then(function (res) {
         if (!res.ok) return res.text().then(function (t) {
-          var msg = t; try { var j = JSON.parse(t); if (j.detail) msg = j.detail; else if (j.error) msg = j.error; } catch(e) {}
+          var msg = t; try { var j = JSON.parse(t); if (j.detail) msg = j.detail; else if (j.error) msg = j.error; } catch (e) {}
           throw new Error(msg || 'Erreur ' + res.status);
         });
         detailEl.textContent = 'Téléchargement du fichier ZIP…';
@@ -204,7 +319,7 @@
             if (result.done) return;
             if (!sawBytes && result.value && result.value.length) { sawBytes = true; barEl.style.animation = ''; }
             chunks.push(result.value); received += result.value.length;
-            bytesEl.textContent = formatMo(received) + ' reçus';
+            bytesEl.textContent = formatBytes(received) + ' reçus';
             var pct = total > 0 ? Math.min(100,(received/total)*100) : hint > 0 ? Math.min(99,(received/hint)*100) : null;
             if (pct != null) { barEl.style.animation = ''; barEl.style.width = pct + '%'; }
             return pump();
@@ -213,12 +328,17 @@
         return pump().then(function () {
           barEl.style.animation = ''; barEl.style.width = '100%';
           detailEl.textContent = 'Enregistrement…';
-          bytesEl.textContent = formatMo(received) + ' au total';
+          bytesEl.textContent = formatBytes(received) + ' au total';
           var blob = new Blob(chunks, { type: 'application/zip' });
-          var safe = <%- JSON.stringify(typeof zipBaseName !== 'undefined' ? zipBaseName : 'release') %>;
+          var safe = meta.zipBaseName || 'release';
           var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = safe + '.zip';
           document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
           detailEl.textContent = 'Téléchargement lancé.';
+          if (IS_SINGLE_USE) {
+            FILES.forEach(function (x) { markFileClickedUI(x.id); });
+            // Apr\u00e8s ZIP complet le serveur expire imm\u00e9diatement \u2192 reload pour afficher l'\u00e9tat r\u00e9el.
+            setTimeout(function () { location.reload(); }, 1500);
+          }
           setTimeout(function () { setOpen(false); zipBtn.disabled = false; resetBar(); }, 800);
         });
       })

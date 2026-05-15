@@ -12,12 +12,14 @@
   </head>
   <body style="min-height:100vh;display:flex;flex-direction:column;background:radial-gradient(ellipse 70% 40% at 50% 0%, oklch(from var(--accent) l c h / 0.07), transparent 60%), var(--bg);">
     <main style="flex:1;display:flex;flex-direction:column;align-items:center;padding:40px 20px 60px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;align-self:flex-start;max-width:560px;width:100%;">
-        <div class="brand-mark" style="width:24px;height:24px;border-radius:6px;font-size:12px;">
-          <%= typeof appName !== 'undefined' && appName ? appName.charAt(0).toUpperCase() : 'R' %>
+      <a href="/" title="Accueil" style="display:flex;align-items:center;gap:10px;margin-bottom:32px;align-self:flex-start;max-width:560px;width:100%;text-decoration:none;color:inherit;cursor:pointer;transition:opacity 0.12s;" onmouseover="this.style.opacity='0.78'" onmouseout="this.style.opacity='1'">
+        <div class="brand-mark" style="width:24px;height:24px;border-radius:6px;">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 19h14" opacity="0.6"/>
+          </svg>
         </div>
         <span style="font-size:13px;font-weight:600;"><%= appName %></span>
-      </div>
+      </a>
       <div style="width:100%;max-width:560px;">
         <%- body %>
       </div>

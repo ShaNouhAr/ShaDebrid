@@ -7,10 +7,14 @@ import { safeFilename } from "../utils.js";
 import {
   accessShareByToken,
   touchShareSingleUseIfNeeded,
+  markFileClicked,
+  markZipDownloaded,
 } from "../shareAccess.js";
 
 export async function publicRoutes(app: FastifyInstance): Promise<void> {
-  // --- Export : liens directs (JDownloader, aria2c, IDM, etc.) ---
+  // --- Export : liens directs CDN (JDownloader, aria2c, IDM, etc.) ---
+  // On garde les URLs AllDebrid telles quelles : ces outils ont besoin de Range natif
+  // et d'une vraie URL externe pour fonctionner correctement.
   app.get<{ Params: { token: string } }>(
     "/d/:token/liens.txt",
     async (req, reply) => {
@@ -45,7 +49,7 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // --- Archive ZIP (téléchargement « toute la release » en un fichier) ---
+  // --- Archive ZIP : par nature streaming serveur, expire la release apr\u00e8s succ\u00e8s complet ---
   app.get<{ Params: { token: string } }>(
     "/d/:token/archive.zip",
     async (req, reply) => {
@@ -65,7 +69,9 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
       const base = safeFilename(dl.name || dl.inputLabel || "release").slice(0, 80);
       const archive = archiver("zip", { zlib: { level: 0 } });
 
+      let archiveError: Error | null = null;
       archive.on("error", (err) => {
+        archiveError = err;
         req.log.error({ err }, "archive zip error");
       });
 
@@ -105,6 +111,13 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
           );
         }
       }
+
+      archive.on("end", () => {
+        if (archiveError) return;
+        markZipDownloaded(dl).catch((err) =>
+          req.log.warn({ err, dl: dl.id }, "markZipDownloaded failed"),
+        );
+      });
 
       void archive.finalize();
       return reply.send(archive);
@@ -147,7 +160,9 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
       id: f.id,
       filename: f.filename,
       size: bytes.format(Number(f.size)) || "—",
+      sizeBytes: Number(f.size),
       directUrl: f.directUrl,
+      streamed: !!f.streamedAt,
     }));
     const ready = files.filter((f) => !!f.directUrl);
 
@@ -158,6 +173,18 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
     const zipBaseName = safeFilename(
       dl.name || dl.inputLabel || "release",
     ).slice(0, 80);
+
+    // Countdown UI : 1 h (timer initial) ou 5 min (raccourci apr\u00e8s 1er clic).
+    // Fallback si scheduledDeleteAt non encore pos\u00e9 (donn\u00e9es legacy) : readyAt + max lifetime.
+    let scheduledDeleteAtMs: number | null = null;
+    if (dl.expirationMode === "single_use") {
+      if (dl.scheduledDeleteAt) {
+        scheduledDeleteAtMs = dl.scheduledDeleteAt.getTime();
+      } else if (dl.readyAt) {
+        scheduledDeleteAtMs =
+          dl.readyAt.getTime() + config.singleUseMaxLifetimeSeconds * 1000;
+      }
+    }
 
     return await reply.renderPage(
       "share.ejs",
@@ -174,12 +201,17 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
         zipBaseName,
         singleFile: ready.length === 1 ? ready[0] : null,
         expirationMode: dl.expirationMode,
+        scheduledDeleteAtMs,
       },
       { layout: "layouts/public.ejs" },
     );
   });
 
-  // 302 vers l’URL CDN du fichier débridé
+  // 302 vers l'URL CDN du fichier débridé.
+  // - Marque le fichier comme « cliqué » (consommé) en single_use, pose le filet de 5 min.
+  // - L'URL CDN AllDebrid reste utilisable même après suppression du magnet :
+  //   l'expiration côté serveur arrive 5 min plus tard via le worker, ce qui laisse
+  //   au visiteur la fenêtre pour relancer un téléchargement coupé sans perdre le lien.
   app.get<{ Params: { token: string; fileId: string } }>(
     "/d/:token/f/:fileId",
     async (req, reply) => {
@@ -194,6 +226,11 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(404).send({ error: "Not ready" });
       }
       await touchShareSingleUseIfNeeded(dl);
+      if (dl.expirationMode === "single_use") {
+        markFileClicked(dl.id, fileId).catch((err) =>
+          req.log.warn({ err, file: fileId }, "markFileClicked failed"),
+        );
+      }
       return reply.redirect(f.directUrl, 302);
     },
   );

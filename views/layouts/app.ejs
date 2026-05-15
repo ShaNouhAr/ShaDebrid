@@ -19,13 +19,15 @@
       <!-- Sidebar (admins only) -->
       <aside class="sidebar collapsed" id="app-sidebar">
         <div class="brand">
-          <div class="brand-mark">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 19h14" opacity="0.6"/>
-            </svg>
-          </div>
-          <div class="brand-name"><%= appName %></div>
-          <span class="brand-sub">v1</span>
+          <a href="/" class="brand-link" title="Accueil">
+            <div class="brand-mark">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 19h14" opacity="0.6"/>
+              </svg>
+            </div>
+            <div class="brand-name"><%= appName %></div>
+            <span class="brand-sub">v1</span>
+          </a>
           <button class="sidebar-toggle" id="sidebar-toggle-btn" title="Réduire / Étendre">
             <svg id="toggle-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
               <path d="M13 6l6 6-6 6"/><path d="M5 12h14"/>
@@ -71,14 +73,14 @@
         <% if (!isAdmin && typeof currentUser !== 'undefined' && currentUser) { %>
         <!-- Top bar for regular users -->
         <div class="top-bar">
-          <div class="top-bar-brand">
+          <a href="/" class="top-bar-brand" title="Accueil" style="text-decoration:none;color:inherit;cursor:pointer;">
             <div class="brand-mark" style="width:22px;height:22px;border-radius:6px;">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M5 19h14" opacity="0.6"/>
               </svg>
             </div>
             <span style="font-size:13px;font-weight:600;"><%= appName %></span>
-          </div>
+          </a>
           <nav class="top-bar-nav">
             <a href="/" class="top-bar-link <%= path === '/' || (path && path.startsWith('/new')) ? 'active' : '' %>">
               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">

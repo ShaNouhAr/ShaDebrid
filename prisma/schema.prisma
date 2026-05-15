@@ -92,5 +92,10 @@ model DownloadFile {
   // Source URL (the "link" returned by AllDebrid /magnet/links - the locked link to unlock)
   sourceUrl String?
 
+  // Date of the most recent fully successful proxy stream to a visitor (full bytes
+  // transferred over /d/:token/f/:id/stream). Used by single_use mode to detect when
+  // every file of a release has been consumed and expire the share immediately.
+  streamedAt DateTime?
+
   @@index([downloadId])
 }

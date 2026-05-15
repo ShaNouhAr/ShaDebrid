@@ -21,6 +21,7 @@ import {
 } from "../utils.js";
 import { resolvePublicUrl } from "../publicUrl.js";
 import { runMaintenance, runOnce } from "../worker.js";
+import { applySingleUseInitialExpiry } from "../shareAccess.js";
 
 type DownloadView = {
   id: number;
@@ -166,14 +167,16 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
     await renderNewDownloadForm(req, reply);
   });
 
-  // Liste des téléchargements et liens de partage
+  // Liste des téléchargements et liens de partage. Les téléchargements expirés sont
+  // masqués de la liste (filtre c\u00f4t\u00e9 requ\u00eate) ; les donn\u00e9es restent en base pour audit.
   app.get<{ Querystring: { suite?: string } }>(
     "/gestion-liens",
     async (req, reply) => {
       const user = await requireAuth(req, reply);
       if (!user) return;
+      const baseWhere = user.role === "admin" ? {} : { userId: user.id };
       const downloads = await prisma.download.findMany({
-        where: user.role === "admin" ? {} : { userId: user.id },
+        where: { ...baseWhere, status: { not: "expired" } },
         include: { files: { orderBy: { position: "asc" } } },
         orderBy: { createdAt: "desc" },
         take: 200,
@@ -194,12 +197,14 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  /** JSON pour rafraîchir l’état sans F5 (comparaison id + status). */
+  /** JSON pour rafraîchir l’état sans F5 (comparaison id + status). Inclut un flag
+   *  `expired` pour que l'UI puisse retirer une ligne d\u00e8s qu'elle disparait. */
   app.get("/downloads/poll", async (req, reply) => {
     const user = await requireAuth(req, reply);
     if (!user) return;
+    const baseWhere = user.role === "admin" ? {} : { userId: user.id };
     const downloads = await prisma.download.findMany({
-      where: user.role === "admin" ? {} : { userId: user.id },
+      where: { ...baseWhere, status: { not: "expired" } },
       select: { id: true, status: true },
       orderBy: { createdAt: "desc" },
       take: 200,
@@ -260,10 +265,11 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const allowedModes = await getAllowedModes(user.id, user.role);
-    const requestedMode = fields.expirationMode;
-    const expirationMode = (
-      allowedModes.includes(requestedMode) ? requestedMode : allowedModes[0]
-    ) as string;
+    const requestedMode = fields.expirationMode || "";
+    const fallbackMode = allowedModes[0] || "single_use";
+    const expirationMode = allowedModes.includes(requestedMode)
+      ? requestedMode
+      : fallbackMode;
     const expirationHours = Math.max(
       0,
       parseInt(fields.expirationDuration || "24", 10) || 24,
@@ -394,6 +400,8 @@ export async function downloadsRoutes(app: FastifyInstance): Promise<void> {
             },
           },
         });
+        // Lien direct = ready imm\u00e9diatement \u2192 pose le timer 1 h pour single_use.
+        await applySingleUseInitialExpiry(dl.id);
         created.push(dl.id);
       } catch (err) {
         const e = err as Error;
