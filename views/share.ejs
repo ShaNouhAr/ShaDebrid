@@ -39,23 +39,34 @@
 
   <!-- Download actions -->
   <div style="padding:20px 32px;border-bottom:1px solid var(--border-subtle);display:flex;flex-wrap:wrap;gap:8px;">
-    <button type="button" id="zip-download-btn"
-      data-token="<%= token %>"
-      data-hint-bytes="<%= typeof zipSizeHintBytes !== 'undefined' ? zipSizeHintBytes : 0 %>"
-      class="btn btn-secondary btn-sm">
+    <a id="zip-download-btn"
+       href="/d/<%= token %>/archive.zip"
+       download="<%= zipBaseName %>.zip"
+       rel="noopener"
+       class="btn btn-primary btn-sm"
+       title="Un seul fichier .zip à décompresser ensuite">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>
       </svg>
-      Télécharger tout (ZIP)
+      Tout en un ZIP
+    </a>
+    <button type="button" id="download-dir-btn" class="btn btn-secondary btn-sm" style="display:none;"
+      title="Écrire les fichiers directement dans votre dossier mémorisé (Chrome / Edge / Brave uniquement)">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      </svg>
+      <span id="download-dir-btn-label">Choisir un dossier</span>
     </button>
-    <button type="button" id="download-all-seq-btn" class="btn btn-primary btn-sm">
-      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>
-      </svg>
-      Tous télécharger
+    <button type="button" id="download-dir-change-btn" class="btn btn-ghost btn-sm" style="display:none;"
+      title="Changer le dossier de destination mémorisé">
+      Changer
+    </button>
+    <button type="button" id="download-dir-forget-btn" class="btn btn-ghost btn-sm" style="display:none;color:var(--text-faint);font-size:11px;padding:6px 8px;"
+      title="Oublier le dossier mémorisé (re-choisir au prochain téléchargement)">
+      Oublier
     </button>
     <a href="/d/<%= token %>/liens.txt" class="btn btn-ghost btn-sm" title="Liens CDN directs (JDownloader, aria2c…)">Fichier de liens (.txt)</a>
-    <p id="download-all-seq-status" style="display:none;width:100%;font-size:11px;color:var(--text-dim);margin:0;"></p>
+    <p id="download-dir-status" style="display:none;width:100%;font-size:11px;color:var(--text-dim);margin:0;"></p>
   </div>
 
   <!-- File list -->
@@ -68,9 +79,6 @@
           <div style="word-break:break-word;font-size:13px;color:var(--text);"><%= f.filename %></div>
           <div class="mono text-faint" style="font-size:11.5px;margin-top:2px;">
             <span><%= f.size %></span>
-            <span class="file-status" style="margin-left:8px;<%= f.streamed ? 'color:var(--success);' : 'display:none;' %>">
-              <%= f.streamed ? '· cliqué (retry possible jusqu\u2019\u00e0 expiration)' : '' %>
-            </span>
           </div>
         </div>
         <a href="/d/<%= token %>/f/<%= f.id %>"
@@ -89,19 +97,6 @@
   </ul>
 </div>
 
-<!-- ZIP progress overlay (proxy n\u00e9cessaire par nature) -->
-<div id="zip-progress-overlay" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:oklch(0.10 0.005 260 / 0.85);backdrop-filter:blur(4px);">
-  <div class="card" style="width:100%;max-width:360px;box-shadow:var(--shadow-lg);">
-    <p id="zip-progress-title" style="font-size:14px;font-weight:500;margin:0 0 4px;">ZIP en cours</p>
-    <p id="zip-progress-detail" style="font-size:12px;color:var(--text-dim);margin:0 0 16px;">Connexion au serveur…</p>
-    <div class="bar-track" style="height:6px;margin-bottom:8px;">
-      <div id="zip-progress-bar" class="bar-fill" style="width:0%;transition:width 300ms ease-out;"></div>
-    </div>
-    <p id="zip-progress-bytes" class="mono text-faint" style="font-size:11px;text-align:center;margin:0 0 16px;"></p>
-    <button type="button" id="zip-progress-cancel" class="btn btn-secondary" style="width:100%;justify-content:center;">Annuler</button>
-  </div>
-</div>
-
 <script type="application/json" id="share-meta"><%- shareMetaJson %></script>
 
 <script>
@@ -112,13 +107,6 @@
   var IS_SINGLE_USE = meta.expirationMode === 'single_use';
   var FILES = (meta.files || []).slice();
   var scheduledAt = meta.scheduledDeleteAtMs ? parseInt(meta.scheduledDeleteAtMs, 10) : null;
-
-  function formatBytes(n) {
-    if (n < 1024) return n + ' o';
-    if (n < 1024*1024) return (n/1024).toFixed(0) + ' Ko';
-    if (n < 1024*1024*1024) return (n/1024/1024).toFixed(1) + ' Mo';
-    return (n/1024/1024/1024).toFixed(2) + ' Go';
-  }
 
   // ---------- Countdown (1 h initial, raccourci \u00e0 5 min apr\u00e8s clic) ----------
   var banner = document.getElementById('share-countdown-banner');
@@ -169,17 +157,8 @@
   function markFileClickedUI(fileId) {
     var f = FILES.find(function (x) { return x.id === fileId; });
     if (f) f.streamed = true;
-    var row = document.getElementById('file-row-' + fileId);
-    if (row) {
-      var st = row.querySelector('.file-status');
-      if (st) {
-        st.textContent = '· cliqué (retry possible jusqu\u2019à expiration)';
-        st.style.display = '';
-        st.style.color = 'var(--success)';
-      }
-    }
     if (IS_SINGLE_USE) {
-      // Premier clic : raccourcit le countdown UI \u00e0 5 min (le serveur fait pareil c\u00f4t\u00e9 DB).
+      // Premier clic : raccourcit le countdown UI à 5 min (le serveur fait pareil côté DB).
       var clickTarget = Date.now() + 5 * 60 * 1000;
       if (!scheduledAt || clickTarget < scheduledAt) {
         anyClicked = true;
@@ -230,118 +209,273 @@
     });
   });
 
-  // ---------- Tous t\u00e9l\u00e9charger : clics s\u00e9quentiels sur les liens /f/:id (302) ----------
-  var seqBtn = document.getElementById('download-all-seq-btn');
-  var seqStat = document.getElementById('download-all-seq-status');
-  if (seqBtn && seqStat) {
-    seqBtn.addEventListener('click', function () {
-      if (seqBtn.disabled) return;
-      var pending = FILES.slice();
-      if (pending.length === 0) return;
-      seqBtn.disabled = true;
-      seqStat.style.display = ''; seqStat.textContent = 'démarrage…';
+  // ---------- Enregistrer dans un dossier (File System Access API, Chromium only) ----------
+  // L'utilisateur choisit UN dossier UNE fois, on mémorise le FileSystemDirectoryHandle
+  // dans IndexedDB (persisté entre sessions et entre pages /d/:token). Les
+  // téléchargements suivants iront dans ce même dossier sans demander à nouveau.
+  // Un sous-dossier nommé d'après chaque release est créé automatiquement pour
+  // garder les fichiers de différentes releases bien séparés.
+  //
+  // Côté permission : le navigateur stocke aussi le consentement (avec la case
+  // « toujours autoriser » dans la modale Chrome on a 1 seul prompt total, sinon
+  // potentiellement 1 prompt par session pour redonner accès au handle persisté).
+  var dirBtn = document.getElementById('download-dir-btn');
+  var dirBtnLabel = document.getElementById('download-dir-btn-label');
+  var dirChangeBtn = document.getElementById('download-dir-change-btn');
+  var dirForgetBtn = document.getElementById('download-dir-forget-btn');
+  var dirStat = document.getElementById('download-dir-status');
+  var supportsFsApi = ('showDirectoryPicker' in window) && window.isSecureContext;
+  if (dirBtn && dirStat && supportsFsApi) {
+    dirBtn.style.display = '';
+    var dirAc = null;
+    var storedHandle = null;
 
-      var i = 0;
-      function next() {
-        if (i >= pending.length) {
-          seqStat.textContent = 'terminé (' + pending.length + ' fichier' + (pending.length > 1 ? 's' : '') + ').';
-          seqBtn.disabled = false;
-          setTimeout(function () { seqStat.style.display = 'none'; seqStat.textContent = ''; }, 2500);
+    function sanitizeFolderName(name) {
+      return (name || 'release').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 80) || 'release';
+    }
+
+    // --- Mini wrapper IndexedDB : un seul magasin "kv" avec une clé fixe.
+    function openIDB() {
+      return new Promise(function (resolve, reject) {
+        var req = indexedDB.open('shadebrid', 1);
+        req.onupgradeneeded = function () {
+          var db = req.result;
+          if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+        };
+        req.onerror = function () { reject(req.error); };
+        req.onsuccess = function () { resolve(req.result); };
+      });
+    }
+    function idbGet(key) {
+      return openIDB().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('kv', 'readonly');
+          var st = tx.objectStore('kv').get(key);
+          st.onsuccess = function () { resolve(st.result); };
+          st.onerror = function () { reject(st.error); };
+        });
+      });
+    }
+    function idbSet(key, value) {
+      return openIDB().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put(value, key);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { reject(tx.error); };
+        });
+      });
+    }
+    function idbDelete(key) {
+      return openIDB().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction('kv', 'readwrite');
+          tx.objectStore('kv').delete(key);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { reject(tx.error); };
+        });
+      });
+    }
+
+    var HANDLE_KEY = 'downloadsDirHandle';
+
+    function setStatus(text, kind) {
+      if (!text) { dirStat.style.display = 'none'; dirStat.textContent = ''; return; }
+      dirStat.style.display = '';
+      dirStat.textContent = text;
+      dirStat.style.color = kind === 'error' ? 'var(--danger)' :
+                            kind === 'success' ? 'var(--success)' :
+                            'var(--text-dim)';
+    }
+    function refreshUI() {
+      if (storedHandle) {
+        dirBtnLabel.textContent = 'Enregistrer dans « ' + (storedHandle.name || 'dossier') + ' »';
+        dirChangeBtn.style.display = '';
+        dirForgetBtn.style.display = '';
+      } else {
+        dirBtnLabel.textContent = 'Choisir un dossier';
+        dirChangeBtn.style.display = 'none';
+        dirForgetBtn.style.display = 'none';
+      }
+    }
+
+    // Vérifie qu'on a (ou peut redemander silencieusement) une permission
+    // readwrite sur le handle stocké. `interactive=true` permet de déclencher
+    // un prompt si nécessaire (doit être appelé depuis un click handler user).
+    async function ensurePermission(handle, interactive) {
+      if (!handle || !handle.queryPermission) return false;
+      var perm = await handle.queryPermission({ mode: 'readwrite' });
+      if (perm === 'granted') return true;
+      if (interactive && handle.requestPermission) {
+        perm = await handle.requestPermission({ mode: 'readwrite' });
+        return perm === 'granted';
+      }
+      return false;
+    }
+
+    // Charge le handle au boot, sans déclencher de prompt.
+    idbGet(HANDLE_KEY).then(function (h) {
+      if (h && h.kind === 'directory') {
+        storedHandle = h;
+        refreshUI();
+      }
+    }).catch(function () { /* IDB indisponible, on continue sans persistance */ });
+
+    async function pickNewFolder() {
+      var root;
+      try {
+        root = await window.showDirectoryPicker({
+          id: 'shadebrid-downloads',
+          mode: 'readwrite',
+          startIn: 'downloads',
+        });
+      } catch (e) {
+        if (e && e.name === 'AbortError') return null;
+        setStatus('Sélecteur indisponible : ' + (e.message || e), 'error');
+        return null;
+      }
+      try {
+        await idbSet(HANDLE_KEY, root);
+      } catch (e) {
+        // Persistance impossible (mode privé strict ?) : on garde quand même en mémoire pour cette session.
+        // eslint-disable-next-line no-console
+        console.warn('[dl-dir] persistance IDB échouée', e);
+      }
+      storedHandle = root;
+      refreshUI();
+      return root;
+    }
+
+    async function runDownloadInto(root) {
+      // Sous-dossier auto par release pour ne pas mélanger.
+      var folderName = sanitizeFolderName(meta.zipBaseName);
+      var target;
+      try {
+        target = await root.getDirectoryHandle(folderName, { create: true });
+      } catch (e) {
+        setStatus('Création du sous-dossier impossible : ' + (e.message || e), 'error');
+        return;
+      }
+
+      dirBtn.disabled = true;
+      dirChangeBtn.disabled = true;
+      dirAc = new AbortController();
+      var done = 0, failed = 0, total = FILES.length;
+      function refresh(extra) {
+        var msg = 'dossier ' + root.name + ' / ' + folderName + ' · ' + done + ' / ' + total + ' OK';
+        if (failed > 0) msg += ' · ' + failed + ' échec(s)';
+        if (extra) msg += ' · ' + extra;
+        setStatus(msg, failed > 0 && done + failed === total ? 'error' : null);
+      }
+      refresh('démarrage');
+
+      var queue = FILES.slice();
+      var CONCURRENCY = Math.min(3, queue.length);
+
+      async function downloadOne(file) {
+        var url = '/d/' + encodeURIComponent(TOKEN) + '/f/' + encodeURIComponent(file.id) + '/stream';
+        var fileName = sanitizeFolderName(file.filename);
+        var res = await fetch(url, { signal: dirAc.signal, credentials: 'same-origin' });
+        if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+        var handle = await target.getFileHandle(fileName, { create: true });
+        var writable = await handle.createWritable();
+        try {
+          await res.body.pipeTo(writable);
+        } catch (err) {
+          try { await writable.abort(); } catch (e) {}
+          throw err;
+        }
+        markFileClickedUI(file.id);
+      }
+      async function worker() {
+        while (queue.length > 0) {
+          if (dirAc.signal.aborted) return;
+          var f = queue.shift();
+          if (!f) return;
+          try {
+            await downloadOne(f);
+            done++;
+          } catch (err) {
+            failed++;
+            // eslint-disable-next-line no-console
+            console.warn('[dl-dir] échec', f.filename, err);
+          }
+          refresh();
+        }
+      }
+      var workers = [];
+      for (var w = 0; w < CONCURRENCY; w++) workers.push(worker());
+      await Promise.all(workers);
+
+      refresh(failed === 0 ? 'terminé' : 'terminé avec ' + failed + ' échec(s)');
+      dirBtn.disabled = false;
+      dirChangeBtn.disabled = false;
+
+      if (IS_SINGLE_USE && done > 0) {
+        var clickTarget = Date.now() + 5 * 60 * 1000;
+        if (!scheduledAt || clickTarget < scheduledAt) {
+          anyClicked = true; startCountdown(clickTarget);
+        }
+      }
+    }
+
+    dirBtn.addEventListener('click', async function () {
+      if (dirBtn.disabled) return;
+      if (FILES.length === 0) return;
+      var root = storedHandle;
+      // Si on a un handle persisté on essaie de l'utiliser, sinon on en demande un nouveau.
+      if (root) {
+        var ok = await ensurePermission(root, true);
+        if (!ok) {
+          setStatus('Accès au dossier refusé. Cliquez pour en choisir un autre.', 'error');
+          // On ne le supprime pas tout de suite : peut-être que l'user a juste annulé.
           return;
         }
-        var item = pending[i];
-        var a = document.createElement('a');
-        a.href = '/d/' + encodeURIComponent(TOKEN) + '/f/' + encodeURIComponent(item.id);
-        a.download = item.filename || '';
-        a.rel = 'noopener';
-        document.body.appendChild(a); a.click(); a.remove();
-        markFileClickedUI(item.id);
-        i++;
-        seqStat.textContent = 'fichier ' + i + ' / ' + pending.length + '…';
-        setTimeout(next, 1100);
+      } else {
+        root = await pickNewFolder();
+        if (!root) return; // user annulé
       }
-      next();
+      await runDownloadInto(root);
     });
+
+    if (dirChangeBtn) {
+      dirChangeBtn.addEventListener('click', async function () {
+        var root = await pickNewFolder();
+        if (root) setStatus('Nouveau dossier mémorisé : ' + root.name, 'success');
+      });
+    }
+    if (dirForgetBtn) {
+      dirForgetBtn.addEventListener('click', async function () {
+        try { await idbDelete(HANDLE_KEY); } catch (e) {}
+        storedHandle = null;
+        refreshUI();
+        setStatus('Dossier oublié — vous serez à nouveau invité à en choisir un.', 'success');
+        setTimeout(function () { setStatus(''); }, 2500);
+      });
+    }
   }
 
-  // ---------- ZIP (proxy par nature, expire la release sur succ\u00e8s complet) ----------
-  var zipBtn     = document.getElementById('zip-download-btn');
-  var overlay    = document.getElementById('zip-progress-overlay');
-  var titleEl    = document.getElementById('zip-progress-title');
-  var detailEl   = document.getElementById('zip-progress-detail');
-  var barEl      = document.getElementById('zip-progress-bar');
-  var bytesEl    = document.getElementById('zip-progress-bytes');
-  var cancelBtn  = document.getElementById('zip-progress-cancel');
-  if (!zipBtn || !overlay) return;
-
-  var zipAc = null;
-  function setOpen(open) { overlay.style.display = open ? 'flex' : 'none'; }
-  function resetBar() { barEl.style.width = '0%'; barEl.style.animation = ''; bytesEl.textContent = ''; }
-  cancelBtn.addEventListener('click', function () {
-    if (zipAc) zipAc.abort();
-    setOpen(false); zipBtn.disabled = false; resetBar();
-  });
-
-  zipBtn.addEventListener('click', function () {
-    if (zipBtn.disabled) return;
-    var hint = parseInt(zipBtn.getAttribute('data-hint-bytes') || '0', 10) || 0;
-    zipAc = new AbortController();
-    zipBtn.disabled = true; resetBar();
-    if (titleEl) titleEl.textContent = 'ZIP en cours';
-    detailEl.textContent = 'Assemblage sur le serveur, patientez…';
-    barEl.style.width = hint > 0 ? '8%' : '35%';
-    barEl.style.animation = 'zipPulse 1.2s ease-in-out infinite';
-    setOpen(true);
-
-    fetch('/d/' + encodeURIComponent(TOKEN) + '/archive.zip', { signal: zipAc.signal, credentials: 'same-origin' })
-      .then(function (res) {
-        if (!res.ok) return res.text().then(function (t) {
-          var msg = t; try { var j = JSON.parse(t); if (j.detail) msg = j.detail; else if (j.error) msg = j.error; } catch (e) {}
-          throw new Error(msg || 'Erreur ' + res.status);
-        });
-        detailEl.textContent = 'Téléchargement du fichier ZIP…';
-        var reader = res.body && res.body.getReader();
-        if (!reader) throw new Error('Lecture du flux impossible');
-        var chunks = [], received = 0, sawBytes = false;
-        var totalHdr = res.headers.get('content-length');
-        var total = totalHdr ? parseInt(totalHdr, 10) : 0;
-
-        function pump() {
-          return reader.read().then(function (result) {
-            if (result.done) return;
-            if (!sawBytes && result.value && result.value.length) { sawBytes = true; barEl.style.animation = ''; }
-            chunks.push(result.value); received += result.value.length;
-            bytesEl.textContent = formatBytes(received) + ' reçus';
-            var pct = total > 0 ? Math.min(100,(received/total)*100) : hint > 0 ? Math.min(99,(received/hint)*100) : null;
-            if (pct != null) { barEl.style.animation = ''; barEl.style.width = pct + '%'; }
-            return pump();
-          });
-        }
-        return pump().then(function () {
-          barEl.style.animation = ''; barEl.style.width = '100%';
-          detailEl.textContent = 'Enregistrement…';
-          bytesEl.textContent = formatBytes(received) + ' au total';
-          var blob = new Blob(chunks, { type: 'application/zip' });
-          var safe = meta.zipBaseName || 'release';
-          var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = safe + '.zip';
-          document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
-          detailEl.textContent = 'Téléchargement lancé.';
-          if (IS_SINGLE_USE) {
-            FILES.forEach(function (x) { markFileClickedUI(x.id); });
-            // Apr\u00e8s ZIP complet le serveur expire imm\u00e9diatement \u2192 reload pour afficher l'\u00e9tat r\u00e9el.
-            setTimeout(function () { location.reload(); }, 1500);
-          }
-          setTimeout(function () { setOpen(false); zipBtn.disabled = false; resetBar(); }, 800);
-        });
-      })
-      .catch(function (err) {
-        if (err && err.name === 'AbortError') { detailEl.textContent = 'Annulé.'; }
-        else { detailEl.textContent = (err && err.message) ? err.message : 'Échec du téléchargement.'; }
-        barEl.style.animation = ''; zipBtn.disabled = false;
-      });
-  });
+  // ---------- ZIP (download natif du navigateur, 0 buffer RAM côté client) ----------
+  // Le bouton est un <a href download>. On laisse le navigateur streamer le ZIP
+  // directement dans Downloads/ : pas de fetch() ni d'accumulation en RAM, donc
+  // ça scale aux releases de plusieurs Go sans faire crasher l'onglet.
+  // Coût : on perd la progress bar custom (la barre native du navigateur en bas
+  // de la fenêtre prend le relais). C'est le compromis assumé pour la fiabilité.
+  //
+  // Côté serveur, /archive.zip fait `markZipDownloaded` sur archive.on('end')
+  // → l'expiration single_use est appliquée correctement quand le navigateur a
+  // tout consommé. Ici on marque juste l'UI optimistement au clic.
+  var zipBtn = document.getElementById('zip-download-btn');
+  if (zipBtn) {
+    zipBtn.addEventListener('click', function () {
+      // Optimiste : on suppose que le téléchargement va aboutir. Le countdown
+      // single_use se mettra à jour comme s'il y avait eu un clic sur chaque
+      // fichier. Si la connexion casse côté client, le serveur n'aura pas
+      // appelé markZipDownloaded, donc la release reste en vie pour retry.
+      if (IS_SINGLE_USE) {
+        FILES.forEach(function (x) { markFileClickedUI(x.id); });
+      }
+    });
+  }
 })();
 </script>
-<style>
-@keyframes zipPulse { 0%,100%{opacity:1}50%{opacity:0.5} }
-</style>

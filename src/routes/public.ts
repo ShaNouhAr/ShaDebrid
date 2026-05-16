@@ -184,10 +184,6 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
     }));
     const ready = files.filter((f) => !!f.directUrl);
 
-    const zipSizeHintBytes = dl.files.reduce(
-      (acc, f) => acc + Number(f.size),
-      0,
-    );
     const zipBaseName = safeFilename(
       dl.name || dl.inputLabel || "release",
     ).slice(0, 80);
@@ -230,7 +226,6 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
           bytes.format(
             dl.files.reduce((acc, f) => acc + Number(f.size), 0),
           ) || "—",
-        zipSizeHintBytes,
         zipBaseName,
         singleFile: ready.length === 1 ? ready[0] : null,
         expirationMode: dl.expirationMode,
@@ -240,6 +235,84 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
       { layout: "layouts/public.ejs" },
     );
   });
+
+  // --- Stream PROXY d'un fichier individuel ---
+  // Variante de /d/:token/f/:fileId : au lieu d'un 302 vers le CDN AllDebrid (que
+  // le navigateur ne peut PAS lire depuis JS à cause de CORS), on streame nous-mêmes
+  // les octets, ce qui rend le flux exploitable par fetch().pipeTo() côté client.
+  // Utilisé par le bouton « Enregistrer dans un dossier » (File System Access API).
+  // Plus lent que le 302 direct (relais serveur), mais c'est la seule façon d'écrire
+  // les fichiers à la volée dans un FileSystemDirectoryHandle.
+  app.get<{ Params: { token: string; fileId: string } }>(
+    "/d/:token/f/:fileId/stream",
+    async (req, reply) => {
+      const r = await accessShareByToken(req.params.token);
+      if (r.kind !== "ok") {
+        return reply.code(404).send({ error: "Not found" });
+      }
+      const { dl } = r;
+      const fileId = parseInt(req.params.fileId, 10);
+      const f = dl.files.find((x) => x.id === fileId);
+      if (!f || !f.directUrl) {
+        return reply.code(404).send({ error: "Not ready" });
+      }
+      if (!isSafeExternalFetchUrl(f.directUrl)) {
+        return reply.code(502).send({ error: "Invalid upstream URL" });
+      }
+      await touchShareSingleUseIfNeeded(dl);
+      if (dl.expirationMode === "single_use") {
+        markFileClicked(dl.id, fileId).catch((err) =>
+          req.log.warn({ err, file: fileId }, "markFileClicked failed"),
+        );
+      }
+      // On forwarde un Range si le client en envoie un (pour permettre la reprise).
+      const fwdHeaders: Record<string, string> = {
+        "User-Agent": config.userAgent,
+      };
+      const range = req.headers["range"];
+      if (typeof range === "string") fwdHeaders["Range"] = range;
+
+      const upstream = await fetch(f.directUrl, {
+        redirect: "follow",
+        headers: fwdHeaders,
+        signal: AbortSignal.timeout(3_600_000), // 1 h max
+      }).catch((err) => err as Error);
+
+      if (upstream instanceof Error) {
+        req.log.warn({ err: upstream }, "stream proxy fetch failed");
+        return reply.code(502).send({ error: "Upstream fetch failed" });
+      }
+      if (!upstream.ok || !upstream.body) {
+        return reply
+          .code(upstream.status || 502)
+          .send({ error: "Upstream returned " + upstream.status });
+      }
+
+      // Propage les headers utiles pour que le browser comprenne taille + Range.
+      const passthrough = [
+        "content-length",
+        "content-type",
+        "content-range",
+        "accept-ranges",
+        "last-modified",
+        "etag",
+      ];
+      for (const h of passthrough) {
+        const v = upstream.headers.get(h);
+        if (v) reply.header(h, v);
+      }
+      reply.header(
+        "Content-Disposition",
+        `attachment; filename="${safeFilename(f.filename)}"`,
+      );
+      // Pas de cache : les CDN AllDebrid sont signés, on ne veut pas cacher en proxy.
+      reply.header("Cache-Control", "private, no-store");
+      reply.code(upstream.status);
+
+      const web = upstream.body as import("stream/web").ReadableStream<Uint8Array>;
+      return reply.send(Readable.fromWeb(web));
+    },
+  );
 
   // 302 vers l'URL CDN du fichier débridé.
   // - Marque le fichier comme « cliqué » (consommé) en single_use, pose le filet de 5 min.
